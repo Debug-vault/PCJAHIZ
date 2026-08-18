@@ -1,0 +1,62 @@
+export type ProductCardData = {
+  id: string;
+  slug: string;
+  nameFr: string;
+  nameAr: string;
+  summaryFr: string | null;
+  summaryAr: string | null;
+  price: number;
+  oldPrice: number | null;
+  discount: number | null;
+  img: string | null;
+  brandSlug: string | null;
+  categorySlug: string | null;
+  stock: number;
+  featured: boolean;
+  isNew: boolean;
+  popularity: number;
+  warrantyMonths: number;
+};
+
+export type ProductDetailData = {
+  product: {
+    id: string;
+    slug: string;
+    sku: string;
+    nameFr: string;
+    nameAr: string;
+    summaryFr: string | null;
+    summaryAr: string | null;
+    descriptionFr: string | null;
+    descriptionAr: string | null;
+    seoTitleFr: string | null;
+    seoTitleAr: string | null;
+    seoDescriptionFr: string | null;
+    seoDescriptionAr: string | null;
+    faqFr: { q: string; a: string }[] | null;
+    faqAr: { q: string; a: string }[] | null;
+    brandSlug: string | null;
+    categorySlug: string | null;
+    price: number;
+    oldPrice: number | null;
+    discount: number | null;
+    currency: string;
+    img: string | null;
+    images: string[];
+    specs: { k: string; v: string }[] | null;
+    stock: number;
+    featured: boolean;
+    isNew: boolean;
+    popularity: number;
+    warrantyMonths: number;
+  };
+  similar: ProductCardData[];
+  reviews: {
+    id: string;
+    author: string;
+    city: string | null;
+    rating: number;
+    comment: string;
+    createdAt: Date;
+  }[];
+};

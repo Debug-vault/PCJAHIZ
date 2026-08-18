@@ -192,6 +192,36 @@
     letter-spacing: -0.01em;
   }
 
+  .checkout-input {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: rgba(6, 11, 24, 0.6);
+    padding: 0.65rem 0.9rem;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: var(--text-1);
+    outline: none;
+    transition: border-color 0.25s var(--ease-expo);
+  }
+  .checkout-input::placeholder { color: var(--text-2); }
+  .checkout-input:focus { border-color: rgba(253, 213, 2, 0.4); }
+
+  .checkout-radio {
+    text-align: left;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: rgba(6, 11, 24, 0.5);
+    padding: 1rem;
+    transition: all 0.25s var(--ease-expo);
+  }
+  .checkout-radio:hover { border-color: var(--line-strong); }
+  .checkout-radio-active {
+    border-color: rgba(253, 213, 2, 0.5);
+    background: var(--gold-dim);
+    box-shadow: 0 0 20px rgba(253, 213, 2, 0.12);
+  }
+
   /* Global film grain + scanlines */
   .cosmos-overlay {
     pointer-events: none;

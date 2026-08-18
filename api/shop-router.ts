@@ -11,8 +11,9 @@ import {
   wishlist,
   shippingZones,
   promoCodes,
+  settings,
 } from "@db/schema";
-import { eq, and, desc, asc, like, or, ilike, gte, lte, inArray, ne, type SQL } from "drizzle-orm";
+import { eq, and, desc, asc, or, ilike, gte, lte, inArray, ne, type SQL } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { env } from "./lib/env";
 
@@ -72,6 +73,13 @@ export const shopRouter = createRouter({
       .where(and(eq(brands.active, true), eq(brands.showInMarquee, true)))
       .orderBy(asc(brands.sortOrder)),
   ),
+
+  settings: publicQuery.query(async () => {
+    const rows = await getDb().select().from(settings).orderBy(asc(settings.key));
+    const map: Record<string, unknown> = {};
+    for (const row of rows) map[row.key] = row.value;
+    return map;
+  }),
 
   list: publicQuery.input(listInput).query(async ({ input }) => {
     const conds: (SQL | undefined)[] = [eq(products.active, true)];
@@ -260,9 +268,16 @@ export const shopRouter = createRouter({
         return sum + (p ? p.price * item.qty : 0);
       }, 0);
 
-      const zone = await db.query.shippingZones.findFirst({
-        where: and(eq(shippingZones.active, true), eq(shippingZones.name, input.city)),
-      });
+      const zones = await db
+        .select()
+        .from(shippingZones)
+        .where(eq(shippingZones.active, true));
+      const cityNorm = input.city.trim().toLowerCase();
+      const zone =
+        zones.find((z) => {
+          if (z.name.toLowerCase() === cityNorm) return true;
+          return Array.isArray(z.cities) && z.cities.some((c) => String(c).toLowerCase() === cityNorm);
+        }) ?? zones.find((z) => z.name.toLowerCase() === "autres villes");
       const shippingFee = zone?.fee ?? 39;
       const freeThreshold = zone?.freeThreshold ?? null;
       const effectiveShipping = freeThreshold != null && subtotal >= freeThreshold ? 0 : shippingFee;
