@@ -167,7 +167,7 @@ export const shopRouter = createRouter({
   byIds: publicQuery.input(z.object({ ids: z.array(z.string()) })).query(async ({ input }) => {
     if (!input.ids.length) return [];
     const rows = await getDb().select().from(products).where(inArray(products.id, input.ids));
-    return rows.map(productCard);
+    return rows.map((p) => ({ ...productCard(p), specs: p.specs, images: p.images }));
   }),
 
   latestReviews: publicQuery.query(() =>

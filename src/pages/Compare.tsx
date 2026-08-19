@@ -12,6 +12,20 @@ export default function Compare() {
   const setOpen = useCartStore((s) => s.setOpen);
   const { data: products, isLoading } = trpc.shop.byIds.useQuery({ ids }, { placeholderData: (prev) => prev });
 
+  const specsOf = (p: NonNullable<typeof products>[number]) => {
+    const raw = (p.specs ?? []) as { k: string; v: string }[] | null | undefined;
+    return raw ?? [];
+  };
+
+  const allRows = new Map<string, Set<string>>();
+  for (const p of products ?? []) {
+    for (const { k, v } of specsOf(p)) {
+      if (!allRows.has(k)) allRows.set(k, new Set());
+      allRows.get(k)!.add(String(v).trim());
+    }
+  }
+  const rows = [...allRows.entries()];
+
   if (ids.length === 0) {
     return (
       <div className="nebula-bg flex min-h-[55vh] flex-col items-center justify-center gap-5 px-4 text-center">
@@ -29,6 +43,9 @@ export default function Compare() {
           <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--gold)]">{t("product.compare")}</p>
           <h1 className="mt-1 font-hud text-3xl font-bold text-[var(--text-1)]">{t("product.compareTitle")}</h1>
           <p className="mt-1 font-mono text-xs text-[var(--text-2)]">{t("product.compareSubtitle")}</p>
+          {rows.length > 0 ? (
+            <p className="mt-2 font-mono text-xs text-[var(--text-2)]">{t("product.compareDiffHint")}</p>
+          ) : null}
         </div>
         <button type="button" onClick={clear} className="btn-ghost2 !py-2 text-sm">
           <X className="h-4 w-4" /> {t("product.compareClear")}
@@ -107,14 +124,30 @@ export default function Compare() {
                   <td key={p.id} className="border-b border-[var(--line)] p-3 text-center text-[var(--text-1)]">{p.stock > 0 ? t("common.inStock") : t("common.outOfStock")}</td>
                 ))}
               </tr>
-              <tr>
-                <td className="p-3 font-mono text-xs uppercase tracking-widest text-[var(--text-2)]">{t("product.specs")}</td>
-              </tr>
-              {products.map((p) => (
-                <tr key={`specs-${p.id}`}>
-                  <td colSpan={products.length + 1} className="border-b border-[var(--line)] p-3 text-center text-xs text-[var(--text-2)]">{p.slug}</td>
+              {rows.length > 0 ? (
+                rows.map(([key, values]) => {
+                  const common = values.size === 1 && products.length > 1;
+                  return (
+                    <tr key={key} className={common ? "bg-[rgba(122,162,255,0.06)]" : ""}>
+                      <td className="border-b border-[var(--line)] p-3 font-mono text-xs uppercase tracking-widest text-[var(--text-2)]">{key}</td>
+                      {products.map((p) => {
+                        const entry = specsOf(p).find((s) => s.k === key);
+                        return (
+                          <td key={p.id} className="border-b border-[var(--line)] p-3 text-center text-[var(--text-1)]">
+                            {entry ? entry.v : <span className="text-[var(--text-2)]">—</span>}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={products.length + 1} className="p-3 text-center text-xs text-[var(--text-2)]">
+                    {t("product.compareEmpty")}
+                  </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

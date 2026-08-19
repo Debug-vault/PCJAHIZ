@@ -7,6 +7,7 @@ import { useCartStore } from "@/lib/cart";
 import { useCompare } from "@/components/compare-provider";
 import { useStoreSettings } from "@/lib/settings";
 import { ProductCard } from "@/components/product-card";
+import { HoloStage } from "@/components/storefront/holo-stage";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -91,7 +92,10 @@ export default function Product() {
         <div className="flex flex-col gap-4">
           <div className="relative aspect-square overflow-hidden rounded-2xl border border-[var(--line)] bg-[#0a1020]">
             {gallery[activeImg] ? (
-              <img src={gallery[activeImg]} alt={name} className="h-full w-full object-cover" />
+              <>
+                <img src={gallery[activeImg]} alt={name} className="h-full w-full object-cover" />
+                <HoloStage image={gallery[activeImg]} name={name} />
+              </>
             ) : (
               <div className="flex h-full w-full items-center justify-center font-mono text-sm uppercase tracking-widest text-[var(--text-2)]">
                 {product.sku}

@@ -19,6 +19,7 @@ import Category from "./pages/Category";
 import Compare from "./pages/Compare";
 import NotFound from "./pages/NotFound";
 import { ChatWidget } from "@/components/storefront/chat-widget";
+import { CompareTray } from "@/components/storefront/compare-tray";
 
 function Shell() {
   const { pathname } = useLocation();
@@ -48,6 +49,7 @@ function Shell() {
       {!bare && <Footer />}
       <CargoDrawer />
       <ChatWidget />
+      <CompareTray />
       <div className="cosmos-overlay" aria-hidden />
       <Toaster theme="dark" position="bottom-center" />
     </div>
