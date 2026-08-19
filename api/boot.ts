@@ -6,12 +6,21 @@ import { appRouter } from "./router";
 import { createContext } from "./context";
 import { env } from "./lib/env";
 import { bootstrapDb } from "./bootstrap";
+import { buildSitemap, buildRobots } from "./lib/sitemap";
 
 bootstrapDb();
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
+app.get("/sitemap.xml", async (c) => {
+  c.header("Content-Type", "application/xml; charset=utf-8");
+  return c.body(await buildSitemap());
+});
+app.get("/robots.txt", async (c) => {
+  c.header("Content-Type", "text/plain; charset=utf-8");
+  return c.body(buildRobots());
+});
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
     endpoint: "/api/trpc",
