@@ -6,6 +6,7 @@ import { trpc } from "@/providers/trpc";
 import { ProductCard } from "@/components/product-card";
 import { Marquee } from "@/components/storefront/marquee";
 import { SectionHead } from "@/components/storefront/section-head";
+import { DropZoneMap } from "@/components/storefront/drop-zone-map";
 
 export default function Home() {
   const { t, locale } = useI18n();
@@ -159,6 +160,11 @@ export default function Home() {
           </div>
         </section>
       ) : null}
+
+      <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6">
+        <SectionHead eyebrow={t("home.dropEyebrow")} title={t("home.dropTitle")} />
+        <DropZoneMap />
+      </section>
 
       <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6">
         <div className="grid gap-4 sm:grid-cols-3">
