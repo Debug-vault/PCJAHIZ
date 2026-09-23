@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { bodyLimit } from "hono/body-limit";
 import type { HttpBindings } from "@hono/node-server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router";
@@ -11,8 +10,6 @@ import { buildSitemap, buildRobots } from "./lib/sitemap";
 bootstrapDb();
 
 const app = new Hono<{ Bindings: HttpBindings }>();
-
-app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 app.get("/sitemap.xml", async (c) => {
   c.header("Content-Type", "application/xml; charset=utf-8");
   return c.body(await buildSitemap());

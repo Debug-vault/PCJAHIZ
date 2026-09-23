@@ -38,6 +38,7 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t("auth.email")}
+            aria-label={t("auth.email")}
             required
             className="checkout-input"
           />
@@ -46,6 +47,7 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder={t("auth.password")}
+            aria-label={t("auth.password")}
             required
             className="checkout-input"
           />

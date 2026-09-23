@@ -22,7 +22,7 @@ export async function buildSitemap(): Promise<string> {
   const push = (loc: string) => {
     const full = `${base}${loc}`;
     urls.push(
-      `<url><loc>${esc(full)}</loc><changefreq>daily</changefreq><xhtml:link rel="alternate" hreflang="fr" href="${esc(full)}"/><xhtml:link rel="alternate" hreflang="ar" href="${esc(full)}"/></url>`,
+      `<url><loc>${esc(full)}</loc><changefreq>daily</changefreq><xhtml:link rel="alternate" hreflang="fr" href="${esc(full)}"/></url>`,
     );
   };
 

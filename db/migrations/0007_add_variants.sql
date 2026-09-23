@@ -1,0 +1,1 @@
+ALTER TABLE "jhz_products" ADD COLUMN IF NOT EXISTS "variants" jsonb;

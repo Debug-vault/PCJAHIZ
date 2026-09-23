@@ -3,6 +3,8 @@ import { trpc } from "@/providers/trpc";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
+import { PageHeader } from "@/components/admin/PageHeader";
+
 export default function Reviews() {
   const { data, isLoading } = trpc.admin.reviews.list.useQuery();
   const utils = trpc.useUtils();
@@ -28,10 +30,7 @@ export default function Reviews() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="font-hud text-2xl font-bold">Avis</h1>
-        <p className="text-sm text-[var(--text-2)]">{data?.length ?? 0} avis</p>
-      </div>
+      <PageHeader title="Reviews" subtitle={`${data?.length ?? 0} reviews`} />
       <div className="space-y-3">
         {(data ?? []).map((r) => (
           <div key={r.id} className="rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-4">
@@ -49,19 +48,19 @@ export default function Reviews() {
             </div>
             <p className="mt-2 text-sm text-[var(--text-2)]">{r.comment}</p>
             <div className="mt-3 flex items-center justify-between text-xs text-[var(--text-2)]">
-              <span>{new Date(r.createdAt).toLocaleDateString("fr-FR")}</span>
+              <span>{new Date(r.createdAt).toLocaleDateString("en-US")}</span>
               <div className="flex gap-2">
                 {r.status !== "approved" && (
                   <Button size="sm" variant="outline" onClick={() => moderate.mutate({ id: r.id, status: "approved" })}>
-                    <Check className="h-3.5 w-3.5" /> Approuver
+                    <Check className="h-3.5 w-3.5" /> Approve
                   </Button>
                 )}
                 {r.status !== "rejected" && (
                   <Button size="sm" variant="outline" onClick={() => moderate.mutate({ id: r.id, status: "rejected" })}>
-                    <X className="h-3.5 w-3.5" /> Rejeter
+                    <X className="h-3.5 w-3.5" /> Reject
                   </Button>
                 )}
-                <Button size="sm" variant="ghost" onClick={() => remove.mutate({ id: r.id })} aria-label="Supprimer">
+                <Button size="sm" variant="ghost" onClick={() => remove.mutate({ id: r.id })} aria-label="Delete">
                   <Trash2 className="h-3.5 w-3.5 text-[var(--alert)]" />
                 </Button>
               </div>
@@ -69,7 +68,7 @@ export default function Reviews() {
           </div>
         ))}
         {(data ?? []).length === 0 && (
-          <p className="rounded-xl border border-[var(--line)] p-10 text-center text-[var(--text-2)]">Aucun avis.</p>
+          <p className="rounded-xl border border-[var(--line)] p-10 text-center text-[var(--text-2)]">No reviews.</p>
         )}
       </div>
     </div>

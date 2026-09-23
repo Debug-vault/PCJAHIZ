@@ -16,7 +16,7 @@ export function SectionHead({
     <div className="flex items-end justify-between gap-4">
       <div>
         {eyebrow ? (
-          <p className="mb-2 font-mono text-xs uppercase tracking-[0.3em] text-[var(--gold)]">{eyebrow}</p>
+          <span className="mb-2 inline-block rounded bg-[var(--gold)] px-2.5 py-0.5 font-hud text-[11px] font-bold uppercase tracking-wider text-black">{eyebrow}</span>
         ) : null}
         <h2 className="font-hud text-2xl font-bold tracking-tight text-[var(--text-1)] sm:text-3xl">{title}</h2>
       </div>

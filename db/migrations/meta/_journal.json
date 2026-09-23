@@ -8,6 +8,55 @@
       "when": 1787071575457,
       "tag": "0000_quiet_wallow",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787173070570,
+      "tag": "0001_striped_luckman",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787392879302,
+      "tag": "0002_brainy_shiver_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787398545677,
+      "tag": "0003_flimsy_senator_kelly",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787678425380,
+      "tag": "0004_gray_mach_iv",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787831583850,
+      "tag": "0005_lame_klaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788000000000,
+      "tag": "0006_add_sections",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788000001000,
+      "tag": "0007_add_variants",
+      "breakpoints": true
     }
   ]
 }

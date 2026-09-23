@@ -5,7 +5,7 @@ import { useI18n } from "@/lib/i18n";
 
 export default function Cart() {
   const { items, setQty, remove, subtotal, count } = useCartStore();
-  const { t, locale, formatPrice } = useI18n();
+  const { t, formatPrice } = useI18n();
 
   const freeThreshold = 1000;
   const progress = Math.min(100, (subtotal() / freeThreshold) * 100);
@@ -20,7 +20,7 @@ export default function Cart() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[var(--store-max-width)] px-4 py-10 sm:px-6">
       <h1 className="font-hud text-3xl font-bold text-[var(--text-1)]">{t("cart.title")}</h1>
       <p className="mt-1 font-mono text-sm text-[var(--text-2)]">
         {count()} {count() > 1 ? t("cart.items") : t("cart.item")}
@@ -42,15 +42,15 @@ export default function Cart() {
           {items.map((item) => (
             <li key={item.productId} className="flex gap-4 rounded-2xl border border-[var(--line)] bg-[var(--glass)] p-4">
               {item.img ? (
-                <img src={item.img} alt={locale === "ar" ? item.nameAr : item.nameFr} className="h-24 w-24 shrink-0 rounded-xl object-cover" />
+                <img src={item.img} alt={item.nameFr} className="h-24 w-24 shrink-0 rounded-xl object-cover" />
               ) : (
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-[#0a1020] font-mono text-[10px] uppercase text-[var(--text-2)]">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-[var(--page-soft)] font-mono text-[10px] uppercase text-[var(--text-2)]">
                   {item.slug}
                 </div>
               )}
               <div className="flex min-w-0 flex-1 flex-col">
                 <Link to={`/product/${item.slug}`} className="line-clamp-2 font-hud text-sm font-bold text-[var(--text-1)] hover:text-[var(--gold)]">
-                  {locale === "ar" ? item.nameAr : item.nameFr}
+                  {item.nameFr}
                 </Link>
                 <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-3">
                   <div className="flex items-center gap-1 rounded-full border border-[var(--line)] px-1.5 py-1">
@@ -62,7 +62,7 @@ export default function Cart() {
                       <Plus className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <span className="price-mono text-lg">{formatPrice(item.price * item.qty)} MAD</span>
+                  <span className="price-mono text-lg">{formatPrice(item.price * item.qty)}</span>
                   <button
                     type="button"
                     onClick={() => remove(item.productId)}
@@ -81,7 +81,7 @@ export default function Cart() {
           <dl className="mt-5 flex flex-col gap-3 font-mono text-sm">
             <div className="flex justify-between text-[var(--text-2)]">
               <dt>{t("cart.subtotal")}</dt>
-              <dd className="text-[var(--text-1)]">{formatPrice(subtotal())} MAD</dd>
+              <dd className="text-[var(--text-1)]">{formatPrice(subtotal())}</dd>
             </div>
             <div className="flex justify-between text-[var(--text-2)]">
               <dt>{t("cart.shipping")}</dt>
@@ -91,7 +91,7 @@ export default function Cart() {
           <div className="my-5 border-t border-[var(--line)]" />
           <div className="flex items-center justify-between">
             <span className="font-hud text-sm font-bold text-[var(--text-1)]">{t("cart.total")}</span>
-            <span className="price-mono text-2xl">{formatPrice(subtotal())} MAD</span>
+            <span className="price-mono text-2xl">{formatPrice(subtotal())}</span>
           </div>
           <Link to="/checkout" className="btn-dock mt-6 w-full">
             {t("cart.checkout")} <ArrowRight className="h-4 w-4" />

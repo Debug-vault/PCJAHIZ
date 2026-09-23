@@ -1,36 +1,51 @@
+import { lazy, Suspense, useEffect } from "react";
 import { Routes, Route, useLocation } from "react-router";
 import { Navbar } from "@/components/Navbar";
+import { TrustBar } from "@/components/TrustBar";
 import { CargoDrawer } from "@/components/CargoDrawer";
 import { Footer } from "@/components/Footer";
-import { I18nProvider, useI18n } from "@/lib/i18n";
+import { I18nProvider } from "@/lib/i18n";
 import { ThemeProvider } from "@/lib/theme";
+import { useStoreSettings } from "@/lib/settings";
 import { Toaster } from "sonner";
 import Home from "./pages/Home";
-import Shop from "./pages/Shop";
-import Product from "./pages/Product";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import OrderSuccess from "./pages/OrderSuccess";
-import Account from "./pages/Account";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Brands from "./pages/Brands";
-import Category from "./pages/Category";
-import Compare from "./pages/Compare";
-import NotFound from "./pages/NotFound";
-import AdminLayout from "./pages/admin/AdminLayout";
-import AdminDashboard from "./pages/admin/Dashboard";
-import AdminProducts from "./pages/admin/Products";
-import AdminOrders from "./pages/admin/Orders";
-import AdminCustomers from "./pages/admin/Customers";
-import AdminCategories from "./pages/admin/Categories";
-import AdminBrands from "./pages/admin/Brands";
-import AdminPromos from "./pages/admin/Promos";
-import AdminShipping from "./pages/admin/Shipping";
-import AdminReviews from "./pages/admin/Reviews";
-import AdminSettings from "./pages/admin/Settings";
-import { ChatWidget } from "@/components/storefront/chat-widget";
 import { CompareTray } from "@/components/storefront/compare-tray";
+import { WhatsAppWidget } from "@/components/storefront/whatsapp-widget";
+import { HeroProvider } from "@/lib/hero-context";
+
+const Shop = lazy(() => import("./pages/Shop"));
+const Product = lazy(() => import("./pages/Product"));
+const Cart = lazy(() => import("./pages/Cart"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const OrderSuccess = lazy(() => import("./pages/OrderSuccess"));
+const Account = lazy(() => import("./pages/Account"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const Brands = lazy(() => import("./pages/Brands"));
+const Category = lazy(() => import("./pages/Category"));
+const Compare = lazy(() => import("./pages/Compare"));
+const Contact = lazy(() => import("./pages/Contact"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
+const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
+const AdminProducts = lazy(() => import("./pages/admin/Products"));
+const AdminOrders = lazy(() => import("./pages/admin/Orders"));
+const AdminCustomers = lazy(() => import("./pages/admin/Customers"));
+const AdminCategories = lazy(() => import("./pages/admin/Categories"));
+const AdminBrands = lazy(() => import("./pages/admin/Brands"));
+const AdminPromos = lazy(() => import("./pages/admin/Promos"));
+const AdminShipping = lazy(() => import("./pages/admin/Shipping"));
+const AdminReviews = lazy(() => import("./pages/admin/Reviews"));
+const AdminSettings = lazy(() => import("./pages/admin/Settings"));
+const AdminCampaigns = lazy(() => import("./pages/admin/Campaigns"));
+const AdminStoreLocations = lazy(() => import("./pages/admin/StoreLocations"));
+const AdminQuoteRequests = lazy(() => import("./pages/admin/QuoteRequests"));
+const AdminNewsletter = lazy(() => import("./pages/admin/Newsletter"));
+const AdminHeroBuilder = lazy(() => import("./pages/admin/hero-builder"));
+const AdminBlog = lazy(() => import("./pages/admin/Blog"));
+const AdminBulkImport = lazy(() => import("./pages/admin/BulkImport"));
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
 
 function AdminRoutes() {
   return (
@@ -45,53 +60,107 @@ function AdminRoutes() {
         <Route path="promos" element={<AdminPromos />} />
         <Route path="shipping" element={<AdminShipping />} />
         <Route path="reviews" element={<AdminReviews />} />
+        <Route path="campaigns" element={<AdminCampaigns />} />
+        <Route path="store-locations" element={<AdminStoreLocations />} />
+        <Route path="quotes" element={<AdminQuoteRequests />} />
+        <Route path="newsletter" element={<AdminNewsletter />} />
+        <Route path="blog" element={<AdminBlog />} />
+        <Route path="bulk-import" element={<AdminBulkImport />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="hero" element={<AdminHeroBuilder />} />
       </Route>
     </Routes>
   );
 }
 
+function PageFallback() {
+  return <div className="flex min-h-[40vh] items-center justify-center font-mono text-sm text-[var(--text-2)]">…</div>;
+}
+
 function Shell() {
   const { pathname } = useLocation();
-  const { dir } = useI18n();
+  const { settings } = useStoreSettings();
   const bare = pathname === "/login" || pathname === "/register";
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--store-max-width", `${settings.storeMaxWidth}px`);
+    const s = settings.sectionMaxWidths;
+    const map: [string, number][] = [
+      ["section-header-max-width", s.header],
+      ["section-hero-max-width", s.hero],
+      ["section-promos-max-width", s.promos],
+      ["section-categories-max-width", s.categories],
+      ["section-deals-max-width", s.deals],
+      ["section-new-arrivals-max-width", s.newArrivals],
+      ["section-best-sellers-max-width", s.bestSellers],
+      ["section-marquee-max-width", s.marquee],
+      ["section-value-props-max-width", s.valueProps],
+      ["section-newsletter-max-width", s.newsletter],
+      ["section-footer-max-width", s.footer],
+    ];
+    for (const [k, v] of map) {
+      document.documentElement.style.setProperty(`--${k}`, v === 0 ? "100%" : `${v}px`);
+    }
+  }, [settings.storeMaxWidth, settings.sectionMaxWidths]);
+
+  useEffect(() => {
+    if (!settings.storeFavicon) return;
+    let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = settings.storeFavicon;
+  }, [settings.storeFavicon]);
 
   if (isAdmin) {
     return (
       <div dir="ltr">
-        <AdminRoutes />
-        <Toaster theme="dark" position="bottom-center" />
+        <Suspense fallback={<PageFallback />}>
+          <AdminRoutes />
+        </Suspense>
+        <Toaster position="bottom-center" />
       </div>
     );
   }
 
   return (
-    <div dir={dir}>
+    <div dir="ltr">
       {!bare && <Navbar />}
-      <main>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/shop" element={<Shop />} />
-          <Route path="/product/:slug" element={<Product />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/order-success/:ref" element={<OrderSuccess />} />
-          <Route path="/account" element={<Account />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/brands" element={<Brands />} />
-          <Route path="/category/:slug" element={<Category />} />
-          <Route path="/compare" element={<Compare />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+      {!bare && <TrustBar />}
+      <main id="main-content">
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/product/:slug" element={<Product />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/order-success/:ref" element={<OrderSuccess />} />
+            <Route path="/account" element={<Account />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/brands" element={<Brands />} />
+            <Route path="/category/:slug" element={<Category />} />
+            <Route path="/compare" element={<Compare />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </main>
       {!bare && <Footer />}
+      {!bare && <WhatsAppWidget />}
       <CargoDrawer />
-      <ChatWidget />
       <CompareTray />
-      <div className="cosmos-overlay" aria-hidden />
-      <Toaster theme="dark" position="bottom-center" />
+      <Toaster position="bottom-center" />
     </div>
   );
 }
@@ -100,7 +169,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <I18nProvider>
-        <Shell />
+        <HeroProvider>
+          <Shell />
+        </HeroProvider>
       </I18nProvider>
     </ThemeProvider>
   );

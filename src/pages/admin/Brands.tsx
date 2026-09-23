@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Sparkles } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import { cn } from "@/lib/utils";
 import type { AppRouter } from "../../../api/router";
@@ -21,28 +21,42 @@ function BrandForm({ initial, onClose }: { initial: Brand | null; onClose: () =>
     name: initial?.name ?? "",
     logo: initial?.logo ?? "",
     description: initial?.description ?? "",
-    descriptionAr: initial?.descriptionAr ?? "",
     seoTitle: initial?.seoTitle ?? "",
-    seoTitleAr: initial?.seoTitleAr ?? "",
     seoDescription: initial?.seoDescription ?? "",
-    seoDescriptionAr: initial?.seoDescriptionAr ?? "",
     sortOrder: initial?.sortOrder ?? 0,
     showInMarquee: initial?.showInMarquee ?? true,
     active: initial?.active ?? true,
   }));
   const [error, setError] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const generateSeo = trpc.ai.generateSeo.useMutation();
   const set = (k: string, v: unknown) => setF((s) => ({ ...s, [k]: v }));
+
+  const handleAiSeo = async () => {
+    const name = f.name.trim();
+    if (!name) { setError("Enter the brand name first."); return; }
+    setAiLoading(true);
+    try {
+      const result = await generateSeo.mutateAsync({ name, type: "brand" });
+      set("seoTitle", result.seoTitle);
+      set("seoDescription", result.seoDescription);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "AI Error.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const save = async () => {
     if (!f.slug.trim() || !f.name.trim()) {
-      setError("slug et nom sont obligatoires.");
+      setError("Slug and name are required.");
       return;
     }
     try {
       if (initial) await update.mutateAsync({ id: initial.id, data: f });
       else await create.mutateAsync(f);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur.");
+      setError(err instanceof Error ? err.message : "Error.");
     }
   };
 
@@ -50,32 +64,48 @@ function BrandForm({ initial, onClose }: { initial: Brand | null; onClose: () =>
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{initial ? "Modifier la marque" : "Nouvelle marque"}</DialogTitle>
-          <DialogDescription>Slug et nom obligatoires.</DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>{initial ? "Edit brand" : "New brand"}</DialogTitle>
+              <DialogDescription>Slug and name required.</DialogDescription>
+            </div>
+            <Button onClick={save}>Save</Button>
+          </div>
         </DialogHeader>
+
+        <div className="rounded-lg border border-[var(--gold-dim)] bg-[var(--gold-dim)]/30 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-4 w-4 text-[var(--gold)]" />
+            <span className="text-sm font-semibold text-[var(--gold)]">AI Generation</span>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={handleAiSeo} disabled={aiLoading}>
+            {aiLoading ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1 h-3.5 w-3.5" />}
+            Generate SEO
+          </Button>
+        </div>
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5"><Label>Slug</Label><Input value={f.slug} onChange={(e) => set("slug", e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Nom</Label><Input value={f.name} onChange={(e) => set("name", e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Name</Label><Input value={f.name} onChange={(e) => set("name", e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Logo (URL)</Label><Input value={f.logo} onChange={(e) => set("logo", e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Ordre</Label><Input type="number" value={f.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>Order</Label><Input type="number" value={f.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} /></div>
           <div className="space-y-1.5"><Label>Description</Label><Textarea value={f.description} onChange={(e) => set("description", e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Description AR</Label><Textarea dir="rtl" value={f.descriptionAr} onChange={(e) => set("descriptionAr", e.target.value)} /></div>
           <div className="space-y-1.5"><Label>SEO title</Label><Input value={f.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>SEO title AR</Label><Input dir="rtl" value={f.seoTitleAr} onChange={(e) => set("seoTitleAr", e.target.value)} /></div>
           <div className="space-y-1.5"><Label>SEO description</Label><Input value={f.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>SEO description AR</Label><Input dir="rtl" value={f.seoDescriptionAr} onChange={(e) => set("seoDescriptionAr", e.target.value)} /></div>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.showInMarquee} onChange={(e) => set("showInMarquee", e.target.checked)} /> Dans le marquee</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.showInMarquee} onChange={(e) => set("showInMarquee", e.target.checked)} /> In marquee</label>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.active} onChange={(e) => set("active", e.target.checked)} /> Active</label>
         </div>
         {error && <p className="text-sm text-[var(--alert)]" role="alert">{error}</p>}
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button onClick={save}>Enregistrer</Button>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={save}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+import { PageHeader } from "@/components/admin/PageHeader";
 
 export default function Brands() {
   const { data, isLoading } = trpc.admin.brands.list.useQuery();
@@ -91,11 +121,8 @@ export default function Brands() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-hud text-2xl font-bold">Marques</h1>
-          <p className="text-sm text-[var(--text-2)]">{data?.length ?? 0} marques</p>
-        </div>
-        <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> Nouvelle</Button>
+        <PageHeader title="Brands" subtitle={`${data?.length ?? 0} brands`} />
+        <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> New</Button>
       </div>
       <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
         <table className="w-full text-sm">
@@ -103,9 +130,9 @@ export default function Brands() {
             <tr>
               <th className="px-4 py-3">Logo</th>
               <th className="px-4 py-3">Slug</th>
-              <th className="px-4 py-3">Nom</th>
+              <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Marquee</th>
-              <th className="px-4 py-3">Statut</th>
+              <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -117,7 +144,7 @@ export default function Brands() {
                 </td>
                 <td className="px-4 py-3 font-mono">{b.slug}</td>
                 <td className="px-4 py-3 font-medium">{b.name}</td>
-                <td className="px-4 py-3">{b.showInMarquee ? "Oui" : "—"}</td>
+                <td className="px-4 py-3">{b.showInMarquee ? "Yes" : "—"}</td>
                 <td className="px-4 py-3">
                   <span className={cn("rounded px-2 py-0.5 text-xs", b.active ? "bg-emerald-500/15 text-emerald-400" : "bg-[var(--alert)]/15 text-[var(--alert)]")}>
                     {b.active ? "Active" : "Inactive"}
@@ -125,8 +152,8 @@ export default function Brands() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => setEditing(b)} aria-label="Modifier"><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => remove.mutate({ id: b.id })} aria-label="Supprimer"><Trash2 className="h-4 w-4 text-[var(--alert)]" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => setEditing(b)} aria-label="Edit"><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => remove.mutate({ id: b.id })} aria-label="Delete"><Trash2 className="h-4 w-4 text-[var(--alert)]" /></Button>
                   </div>
                 </td>
               </tr>

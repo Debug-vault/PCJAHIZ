@@ -11,6 +11,13 @@ import {
   wishlist,
   shippingZones,
   promoCodes,
+  campaigns,
+  storeLocations,
+  newsletterSubscribers,
+  loyaltyMembers,
+  quoteRequests,
+  blogPosts,
+  blogCategories,
 } from "./schema";
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -18,6 +25,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   orders: many(orders),
   reviews: many(reviews),
   wishlist: many(wishlist),
+  loyalty: many(loyaltyMembers),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -60,3 +68,16 @@ export const wishlistRelations = relations(wishlist, ({ one }) => ({
 
 export const shippingZonesRelations = relations(shippingZones, () => ({}));
 export const promoCodesRelations = relations(promoCodes, () => ({}));
+export const campaignsRelations = relations(campaigns, () => ({}));
+export const storeLocationsRelations = relations(storeLocations, () => ({}));
+export const newsletterSubscribersRelations = relations(newsletterSubscribers, () => ({}));
+export const loyaltyMembersRelations = relations(loyaltyMembers, ({ one }) => ({
+  user: one(users, { fields: [loyaltyMembers.userId], references: [users.id] }),
+}));
+export const quoteRequestsRelations = relations(quoteRequests, () => ({}));
+export const blogCategoriesRelations = relations(blogCategories, ({ many }) => ({
+  posts: many(blogPosts),
+}));
+export const blogPostsRelations = relations(blogPosts, ({ one }) => ({
+  category: one(blogCategories, { fields: [blogPosts.categorySlug], references: [blogCategories.slug] }),
+}));

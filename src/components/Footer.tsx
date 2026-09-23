@@ -1,98 +1,225 @@
 import { Link } from "react-router";
+import { Facebook, Instagram, Youtube, Linkedin, MessageCircle, Phone, Mail, MapPin, ExternalLink, CreditCard, Banknote, BanknoteIcon, Wallet } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useStoreSettings } from "@/lib/settings";
-import { trpc } from "@/providers/trpc";
 
 export function Footer() {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const { settings } = useStoreSettings();
-  const { data: categories } = trpc.shop.categories.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
-  const { data: brands } = trpc.shop.brands.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
+  const phone = settings.contactPhone || "+212 6 00 00 00 00";
+  const phoneClean = phone.replace(/[^0-9+]/g, "");
+  const h = settings.header;
+  const footerBg = h?.bottomNav?.bg || "#1a1a2e";
 
   return (
-    <footer className="border-t border-[var(--line)] bg-[#060b18]">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <div className="mb-3 flex items-center gap-2.5">
-            {settings.storeLogo ? (
-              <img src={settings.storeLogo} alt={settings.storeName} className="h-9 w-auto" />
-            ) : (
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--gold-dim)] font-hud text-lg font-bold text-[var(--gold)] ring-1 ring-[rgba(253,213,2,0.35)]">
-                J
-              </span>
-            )}
-            <span className="font-hud text-lg font-bold text-[var(--text-1)]">{settings.storeName}</span>
-          </div>
-          <p className="mb-4 max-w-xs text-sm leading-relaxed text-[var(--text-2)]">{t("footer.tagline")}</p>
-          <p className="font-mono text-xs text-[var(--text-2)]">{settings.contactEmail}</p>
-          <p className="font-mono text-xs text-[var(--text-2)]">{settings.contactPhone}</p>
-        </div>
+    <footer className="text-white" style={{ background: footerBg }}>
+      {/* Contact + Store */}
+      <div className="border-b border-white/10">
+        <div className="mx-auto max-w-[var(--section-footer-max-width)] px-6 py-10 sm:px-8">
+          <div className="grid gap-10 md:grid-cols-2">
+            {/* Contact */}
+            <div>
+              <h3 className="mb-2 font-hud text-sm font-bold uppercase tracking-wider text-white">{t("footer.contactTitle")}</h3>
+              <p className="mb-5 text-sm leading-relaxed text-white/60">{t("footer.contactDesc")}</p>
 
-        <div>
-          <h3 className="mb-3 font-hud text-sm font-bold uppercase tracking-widest text-[var(--text-1)]">
-            {t("footer.categories")}
-          </h3>
-          <ul className="flex flex-col gap-2">
-            {(categories ?? []).slice(0, 6).map((c) => (
-              <li key={c.slug}>
-                <Link
-                  to={`/category/${c.slug}`}
-                  className="text-sm text-[var(--text-2)] transition-colors hover:text-[var(--gold)]"
+              <div className="mb-5 flex flex-wrap gap-3">
+                <a
+                  href={`https://wa.me/${phoneClean.replace("+", "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90"
                 >
-                  {locale === "ar" ? c.nameAr : c.nameFr}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
+                  <MessageCircle className="h-4 w-4" />
+                  {t("footer.whatsappTitle")}
+                </a>
+                <a
+                  href={`tel:${phoneClean}`}
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:border-white/40"
+                >
+                  <Phone className="h-4 w-4" />
+                  {t("footer.phoneTitle")}
+                </a>
+              </div>
 
-        <div>
-          <h3 className="mb-3 font-hud text-sm font-bold uppercase tracking-widest text-[var(--text-1)]">
-            {t("footer.brands")}
-          </h3>
-          <ul className="flex flex-col gap-2">
-            {(brands ?? []).slice(0, 6).map((b) => (
-              <li key={b.slug}>
-                <Link to="/shop" className="text-sm text-[var(--text-2)] transition-colors hover:text-[var(--gold)]">
-                  {b.name}
-                </Link>
-              </li>
-            ))}
-            <li>
-              <Link to="/brands" className="text-sm text-[var(--gold)] hover:underline">
-                {t("footer.allBrands")}
-              </Link>
-            </li>
-          </ul>
-        </div>
+              <ul className="space-y-2.5 text-sm text-white/60">
+                <li className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 shrink-0 text-[var(--gold)]" />{t("footer.emailLabel")}</li>
+                <li className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 shrink-0 text-[var(--gold)]" />{t("footer.quoteLabel")}</li>
+                <li className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 shrink-0 text-[var(--gold)]" />{t("footer.trackingLabel")}</li>
+                <li className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 shrink-0 text-[var(--gold)]" />{t("footer.allContactsLabel")}</li>
+              </ul>
+            </div>
 
-        <div>
-          <h3 className="mb-3 font-hud text-sm font-bold uppercase tracking-widest text-[var(--text-1)]">
-            {t("footer.contact")}
-          </h3>
-          <div className="flex flex-col gap-2 text-sm text-[var(--text-2)]">
-            <Link to="/shop" className="transition-colors hover:text-[var(--gold)]">{t("nav.products")}</Link>
-            <Link to="/compare" className="transition-colors hover:text-[var(--gold)]">{t("product.compare")}</Link>
-            <Link to="/account" className="transition-colors hover:text-[var(--gold)]">{t("nav.account")}</Link>
-          </div>
-          <div className="mt-4">
-            <h4 className="mb-2 font-hud text-xs font-bold uppercase tracking-widest text-[var(--text-2)]">
-              {t("footer.paymentMethods")}
-            </h4>
-            <div className="flex gap-2">
-              <span className="rounded-md border border-[var(--line)] px-2 py-1 font-mono text-[10px] uppercase text-[var(--text-2)]">
-                COD
-              </span>
-              <span className="rounded-md border border-[var(--line)] px-2 py-1 font-mono text-[10px] uppercase text-[var(--text-2)]">
-                CMI
-              </span>
+            {/* Store */}
+            <div>
+              <h3 className="mb-2 font-hud text-sm font-bold uppercase tracking-wider text-white">{t("footer.storeTitle")}</h3>
+              <p className="flex items-center gap-1.5 text-sm font-bold text-white"><MapPin className="h-3.5 w-3.5 text-[var(--gold)]" />{t("footer.storeAgadirTitle")}</p>
+              <p className="mt-1 text-sm text-white/60">{t("footer.storeAgadirAddr")}</p>
+              <p className="mt-0.5 text-sm text-white/60">{t("footer.storeAgadirHours")}</p>
+              <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-white/50 hover:text-white">
+                {t("footer.storeMap")} <ExternalLink className="h-3 w-3" />
+              </a>
+              <div className="mt-4 overflow-hidden rounded-lg">
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3440.9481794393946!2d-9.5709428!3d30.409212099999998!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xdb3b7cf55ae0e0d%3A0xb657d0fb841ee7c!2sDigiDis!5e0!3m2!1sen!2sma!4v1787994032116!5m2!1sen!2sma"
+                  width="100%"
+                  height="200"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  title={t("footer.storeAgadirTitle")}
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-[var(--line)] py-5 text-center font-mono text-xs text-[var(--text-2)]">
-        © {new Date().getFullYear()} {settings.storeName}. {t("footer.rights")}
+      {/* Logo + Links columns */}
+      <div className="border-b border-white/10">
+        <div className="mx-auto max-w-[var(--section-footer-max-width)] px-6 py-10 sm:px-8">
+          <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
+            {/* Brand */}
+            <div className={settings.footerAlign === "center" ? "text-center" : settings.footerAlign === "right" ? "text-right" : ""}>
+              <div className={`mb-3 ${settings.footerAlign === "center" ? "flex justify-center" : settings.footerAlign === "right" ? "flex justify-end" : ""}`}>
+                {settings.storeLogo ? (
+                  <img src={settings.storeLogo} alt={settings.storeName} className="w-auto object-contain brightness-0 invert" style={{ height: settings.footerLogoSize }} />
+                ) : (
+                  <span className="flex items-center justify-center rounded-full bg-[var(--gold)] font-hud text-2xl font-bold text-black" style={{ width: settings.footerLogoSize, height: settings.footerLogoSize }}>J</span>
+                )}
+              </div>
+              <p className="mb-4 max-w-xs text-sm leading-relaxed text-white/60">{t("footer.taglineDesc")}</p>
+
+              {/* Social */}
+              <div className={`flex gap-2 ${settings.footerAlign === "center" ? "justify-center" : settings.footerAlign === "right" ? "justify-end" : ""}`}>
+                {[Facebook, Instagram, Youtube, Linkedin].map((Icon, i) => (
+                  <a key={i} href="#" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/60 transition-colors hover:bg-[var(--gold)] hover:text-black">
+                    <Icon className="h-4 w-4" />
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Acheter */}
+            <div>
+              <h3 className="mb-4 font-hud text-xs font-bold uppercase tracking-wider text-[var(--gold)]">{t("footer.buyTitle")}</h3>
+              <ul className="space-y-2.5">
+                {[
+                  { label: t("footer.buyDeals"), to: "/shop?sort=discount" },
+                  { label: t("footer.buyBestSellers"), to: "/shop?sort=popular" },
+                  { label: t("footer.buyNewArrivals"), to: "/shop?sort=newest" },
+                  { label: t("footer.buyAllBrands"), to: "/brands" },
+                  { label: t("footer.buyGuides"), to: "/blog" },
+                  { label: t("footer.buyCartridges"), to: "/shop" },
+                  { label: t("footer.buyVideos"), to: "/shop" },
+                  { label: t("footer.buySitemap"), to: "/sitemap" },
+                ].map((item) => (
+                  <li key={item.label}>
+                    <Link to={item.to} className="flex items-center gap-1.5 text-sm text-white/60 transition-colors hover:text-white">
+                      <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--gold)]" />
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Aide & commande */}
+            <div>
+              <h3 className="mb-4 font-hud text-xs font-bold uppercase tracking-wider text-[var(--gold)]">{t("footer.helpTitle")}</h3>
+              <ul className="space-y-2.5">
+                {[
+                  { label: t("footer.helpDelivery") },
+                  { label: t("footer.helpTracking") },
+                  { label: t("footer.helpWarranty") },
+                  { label: t("footer.helpPayments") },
+                  { label: t("footer.helpSupport") },
+                  { label: t("footer.helpShipment") },
+                ].map((item) => (
+                  <li key={item.label}>
+                    <span className="flex items-center gap-1.5 text-sm text-white/60 transition-colors hover:text-white cursor-pointer">
+                      <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--gold)]" />
+                      {item.label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* PC Jahiz */}
+            <div>
+              <h3 className="mb-4 font-hud text-xs font-bold uppercase tracking-wider text-[var(--gold)]">{t("footer.brandTitle")}</h3>
+              <ul className="space-y-2.5">
+                {[
+                  { label: t("footer.brandAbout") },
+                  { label: t("footer.brandNews") },
+                  { label: t("footer.brandPro"), to: "/contact" },
+                  { label: t("footer.brandLoyalty") },
+                  { label: t("footer.brandAffiliate") },
+                  { label: t("footer.brandAccount"), to: "/account" },
+                  { label: t("footer.brandCommerce") },
+                ].map((item) => (
+                  <li key={item.label}>
+                    {item.to ? (
+                      <Link to={item.to} className="flex items-center gap-1.5 text-sm text-white/60 transition-colors hover:text-white">
+                        <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--gold)]" />
+                        {item.label}
+                      </Link>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-sm text-white/60 transition-colors hover:text-white cursor-pointer">
+                        <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--gold)]" />
+                        {item.label}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment */}
+      <div className="border-b border-white/10">
+        <div className="mx-auto max-w-[var(--section-footer-max-width)] px-6 py-10 sm:px-8">
+          <h3 className="mb-5 font-hud text-sm font-bold uppercase tracking-wider text-white">{t("footer.paymentTitle")}</h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { icon: CreditCard, title: t("footer.paymentCbTitle"), desc: t("footer.paymentCbDesc"), cards: ["VISA", "MC", "CMI"] },
+              { icon: Banknote, title: t("footer.paymentWireTitle"), desc: t("footer.paymentWireDesc") },
+              { icon: Wallet, title: t("footer.paymentCashTitle"), desc: t("footer.paymentCashDesc") },
+              { icon: BanknoteIcon, title: t("footer.paymentCheckTitle"), desc: t("footer.paymentCheckDesc") },
+            ].map((method) => (
+              <div key={method.title} className="rounded-xl border border-white/10 bg-white/5 p-5">
+                <div className="mb-2 flex items-center gap-2">
+                  <method.icon className="h-4 w-4 text-[var(--gold)]" />
+                  <span className="font-hud text-xs font-bold uppercase tracking-wider text-white">{method.title}</span>
+                </div>
+                <p className="text-xs leading-relaxed text-white/50">{method.desc}</p>
+                {method.cards ? (
+                  <div className="mt-3 flex gap-2">
+                    {method.cards.map((c) => (
+                      <span key={c} className="rounded bg-white/10 px-2 py-0.5 font-mono text-[10px] font-bold text-white/70">{c}</span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Legal */}
+      <div className="py-5">
+        <div className="mx-auto flex max-w-[var(--section-footer-max-width)] flex-col items-center justify-between gap-3 px-6 text-center text-xs text-white/40 sm:flex-row sm:px-8 sm:text-left">
+          <p>{t("footer.legal")}</p>
+          <div className="flex flex-wrap items-center gap-4">
+            <a href="#" className="transition-colors hover:text-white">{t("footer.mentions")}</a>
+            <a href="#" className="transition-colors hover:text-white">{t("footer.cgv")}</a>
+            <a href="#" className="transition-colors hover:text-white">{t("footer.privacy")}</a>
+            <span>© {new Date().getFullYear()} {settings.storeName}. {t("footer.rights")}</span>
+          </div>
+        </div>
       </div>
     </footer>
   );

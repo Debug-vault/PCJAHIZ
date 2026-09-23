@@ -28,7 +28,7 @@ function ZoneForm({ initial, onClose }: { initial: Zone | null; onClose: () => v
 
   const save = async () => {
     if (!f.name.trim()) {
-      setError("Le nom de la zone est obligatoire.");
+      setError("Zone name is required.");
       return;
     }
     const payload = {
@@ -43,7 +43,7 @@ function ZoneForm({ initial, onClose }: { initial: Zone | null; onClose: () => v
       if (initial) await update.mutateAsync({ id: initial.id, data: payload });
       else await create.mutateAsync(payload);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur.");
+      setError(err instanceof Error ? err.message : "Error.");
     }
   };
 
@@ -51,29 +51,36 @@ function ZoneForm({ initial, onClose }: { initial: Zone | null; onClose: () => v
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{initial ? "Modifier la zone" : "Nouvelle zone"}</DialogTitle>
-          <DialogDescription>Frais fixes par zone de livraison.</DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>{initial ? "Edit Zone" : "New Zone"}</DialogTitle>
+              <DialogDescription>Fixed fees per shipping zone.</DialogDescription>
+            </div>
+            <Button onClick={save}>Save</Button>
+          </div>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5"><Label>Nom de la zone</Label><Input value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Casablanca" /></div>
-          <div className="space-y-1.5"><Label>Frais (MAD)</Label><Input type="number" value={f.fee} onChange={(e) => set("fee", Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label>Livraison gratuite dès (MAD)</Label><Input type="number" value={f.freeThreshold ?? ""} onChange={(e) => set("freeThreshold", e.target.value === "" ? null : Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label>Ordre</Label><Input type="number" value={f.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>Zone Name</Label><Input value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Casablanca" /></div>
+          <div className="space-y-1.5"><Label>Fee (MAD)</Label><Input type="number" value={f.fee} onChange={(e) => set("fee", Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>Free shipping from (MAD)</Label><Input type="number" value={f.freeThreshold ?? ""} onChange={(e) => set("freeThreshold", e.target.value === "" ? null : Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>Order</Label><Input type="number" value={f.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} /></div>
           <div className="col-span-2 space-y-1.5">
-            <Label>Villes (une par ligne)</Label>
+            <Label>Cities (one per line)</Label>
             <textarea className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm" value={f.cities} onChange={(e) => set("cities", e.target.value)} />
           </div>
           <label className="col-span-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={f.active} onChange={(e) => set("active", e.target.checked)} /> Active</label>
         </div>
         {error && <p className="text-sm text-[var(--alert)]" role="alert">{error}</p>}
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button onClick={save}>Enregistrer</Button>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={save}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+import { PageHeader } from "@/components/admin/PageHeader";
 
 export default function Shipping() {
   const { data, isLoading } = trpc.admin.shipping.list.useQuery();
@@ -89,21 +96,18 @@ export default function Shipping() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-hud text-2xl font-bold">Livraison</h1>
-          <p className="text-sm text-[var(--text-2)]">{data?.length ?? 0} zones</p>
-        </div>
-        <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> Nouvelle</Button>
+        <PageHeader title="Shipping" subtitle={`${data?.length ?? 0} zones`} />
+        <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> New</Button>
       </div>
       <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
         <table className="w-full text-sm">
           <thead className="border-b border-[var(--line)] bg-[var(--void-2)] text-left text-xs uppercase tracking-wider text-[var(--text-2)]">
             <tr>
               <th className="px-4 py-3">Zone</th>
-              <th className="px-4 py-3">Frais</th>
-              <th className="px-4 py-3">Gratuit dès</th>
-              <th className="px-4 py-3">Villes</th>
-              <th className="px-4 py-3">Statut</th>
+              <th className="px-4 py-3">Fee</th>
+              <th className="px-4 py-3">Free from</th>
+              <th className="px-4 py-3">Cities</th>
+              <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -113,7 +117,7 @@ export default function Shipping() {
                 <td className="px-4 py-3 font-medium">{z.name}</td>
                 <td className="px-4 py-3 font-mono">{z.fee} MAD</td>
                 <td className="px-4 py-3 font-mono">{z.freeThreshold != null ? `${z.freeThreshold} MAD` : "—"}</td>
-                <td className="px-4 py-3 text-[var(--text-2)]">{(z.cities as string[] | null)?.length ?? 0} villes</td>
+                <td className="px-4 py-3 text-[var(--text-2)]">{(z.cities as string[] | null)?.length ?? 0} cities</td>
                 <td className="px-4 py-3">
                   <span className={cn("rounded px-2 py-0.5 text-xs", z.active ? "bg-emerald-500/15 text-emerald-400" : "bg-[var(--alert)]/15 text-[var(--alert)]")}>
                     {z.active ? "Active" : "Inactive"}
@@ -121,8 +125,8 @@ export default function Shipping() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => setEditing(z)} aria-label="Modifier"><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => remove.mutate({ id: z.id })} aria-label="Supprimer"><Trash2 className="h-4 w-4 text-[var(--alert)]" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => setEditing(z)} aria-label="Edit"><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => remove.mutate({ id: z.id })} aria-label="Delete"><Trash2 className="h-4 w-4 text-[var(--alert)]" /></Button>
                   </div>
                 </td>
               </tr>

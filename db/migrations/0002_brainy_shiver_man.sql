@@ -1,0 +1,1 @@
+ALTER TABLE "jhz_campaigns" ADD COLUMN "layout" text DEFAULT 'split' NOT NULL;

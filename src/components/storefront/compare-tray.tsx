@@ -6,7 +6,7 @@ import { useCompare } from "@/components/compare-provider";
 import { COMPARE_MAX } from "@/lib/compare";
 
 export function CompareTray() {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const { ids, clear } = useCompare();
   const { data: products } = trpc.shop.byIds.useQuery({ ids }, { enabled: ids.length > 0, placeholderData: (prev) => prev });
 
@@ -27,8 +27,8 @@ export function CompareTray() {
         {(products ?? []).map((p) => (
           <span key={p.id} className="compare-chip">
             {p.img ? <img src={p.img} alt="" className="compare-chip-img" /> : null}
-            {locale === "ar" ? p.nameAr : p.nameFr}
-          </span>
+{p.nameFr}
+            </span>
         ))}
       </div>
       <Link to="/compare" className="btn-dock !px-4 !py-2 text-xs">

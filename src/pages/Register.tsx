@@ -42,10 +42,10 @@ export default function Register() {
       <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--glass-solid)] p-8">
         <h1 className="font-hud text-2xl font-bold text-[var(--text-1)]">{t("auth.registerTitle")}</h1>
         <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth.namePlaceholder")} required className="checkout-input" />
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.email")} required className="checkout-input" />
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.password")} required minLength={8} className="checkout-input" />
-          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={t("auth.newPasswordConfirm")} required minLength={8} className="checkout-input" />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth.namePlaceholder")} aria-label={t("auth.namePlaceholder")} required className="checkout-input" />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.email")} aria-label={t("auth.email")} required className="checkout-input" />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth.password")} aria-label={t("auth.password")} required minLength={8} className="checkout-input" />
+          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={t("auth.newPasswordConfirm")} aria-label={t("auth.newPasswordConfirm")} required minLength={8} className="checkout-input" />
           <button type="submit" disabled={register.isPending} className="btn-dock w-full">
             {register.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {t("auth.register")}

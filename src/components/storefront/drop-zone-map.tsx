@@ -27,7 +27,7 @@ const CITY_NAMES: Record<string, string> = {
 };
 
 export function DropZoneMap({ compact = false }: { compact?: boolean }) {
-  const { t } = useI18n();
+  const { t, formatPrice } = useI18n();
   const { data: zones } = trpc.shop.shipping.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
 
   return (
@@ -64,7 +64,7 @@ export function DropZoneMap({ compact = false }: { compact?: boolean }) {
           {zones.map((z) => (
             <span key={z.id} className="hud-chip">
               {z.name}
-              {z.fee != null ? ` · ${z.fee} MAD` : ""}
+              {z.fee != null ? ` · ${formatPrice(z.fee)}` : ""}
             </span>
           ))}
         </div>

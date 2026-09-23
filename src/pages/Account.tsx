@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router";
-import { Loader2, LogOut } from "lucide-react";
+import { Loader2, LogOut, LayoutDashboard } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { trpc } from "@/providers/trpc";
 import { useCartStore } from "@/lib/cart";
@@ -18,7 +18,7 @@ export default function Account() {
   const clearCart = useCartStore((s) => s.clear);
 
   if (isLoading) {
-    return <div className="mx-auto max-w-7xl px-4 py-24 text-center font-mono text-sm text-[var(--text-2)]">{t("common.loading")}</div>;
+    return <div className="mx-auto max-w-[var(--store-max-width)] px-4 py-24 text-center font-mono text-sm text-[var(--text-2)]">{t("common.loading")}</div>;
   }
 
   if (!me) {
@@ -41,7 +41,7 @@ export default function Account() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[var(--store-max-width)] px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--gold)]">{t("account.title")}</p>
@@ -50,10 +50,18 @@ export default function Account() {
           </h1>
           <p className="mt-1 font-mono text-xs text-[var(--text-2)]">{me.email}</p>
         </div>
-        <button type="button" onClick={handleLogout} disabled={logout.isPending} className="btn-ghost2 !py-2 text-sm">
-          {logout.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
-          {t("nav.logout")}
-        </button>
+        <div className="flex items-center gap-3">
+          {me.role === "admin" ? (
+            <Link to="/admin" className="btn-dock !py-2 text-sm">
+              <LayoutDashboard className="h-4 w-4" />
+              {t("account.admin")}
+            </Link>
+          ) : null}
+          <button type="button" onClick={handleLogout} disabled={logout.isPending} className="btn-ghost2 !py-2 text-sm">
+            {logout.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+            {t("nav.logout")}
+          </button>
+        </div>
       </div>
 
       <section className="mt-10">
@@ -75,7 +83,7 @@ export default function Account() {
                     <span className="rounded-full border border-[var(--line)] px-3 py-1 font-mono text-xs text-[var(--gold)]">
                       {t(`status.${o.status}`)}
                     </span>
-                    <span className="price-mono">{formatPrice(o.total)} MAD</span>
+                    <span className="price-mono">{formatPrice(o.total)}</span>
                   </div>
                 </div>
                 {o.items && o.items.length ? (
@@ -83,7 +91,7 @@ export default function Account() {
                     {o.items.map((it) => (
                       <li key={it.id} className="flex items-center justify-between font-mono text-xs text-[var(--text-2)]">
                         <span>× {it.quantity} — {it.nameFr}</span>
-                        <span>{formatPrice(it.total)} MAD</span>
+                        <span>{formatPrice(it.total)}</span>
                       </li>
                     ))}
                   </ul>
@@ -102,11 +110,11 @@ export default function Account() {
           <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
             {wishlist.map((p) => (
               <Link key={p.id} to={`/product/${p.slug}`} className="group rounded-xl border border-[var(--line)] bg-[var(--glass)] p-3">
-                {p.img ? <img src={p.img} alt="" className="aspect-square w-full rounded-lg object-cover" /> : <div className="aspect-square w-full rounded-lg bg-[#0a1020]" />}
+                {p.img ? <img src={p.img} alt="" className="aspect-square w-full rounded-lg object-cover" /> : <div className="aspect-square w-full rounded-lg bg-[var(--page-soft)]" />}
                 <p className="mt-2 line-clamp-2 text-sm font-semibold text-[var(--text-1)] group-hover:text-[var(--gold)]">
                   {p.nameFr}
                 </p>
-                <p className="price-mono mt-1 text-sm">{formatPrice(p.price)} MAD</p>
+                <p className="price-mono mt-1 text-sm">{formatPrice(p.price)}</p>
               </Link>
             ))}
           </div>

@@ -6,7 +6,7 @@ import { useCompare } from "@/components/compare-provider";
 import { useCartStore } from "@/lib/cart";
 
 export default function Compare() {
-  const { t, locale, formatPrice } = useI18n();
+  const { t, formatPrice } = useI18n();
   const { ids, toggle, clear } = useCompare();
   const add = useCartStore((s) => s.add);
   const setOpen = useCartStore((s) => s.setOpen);
@@ -37,7 +37,7 @@ export default function Compare() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[var(--store-max-width)] px-4 py-10 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--gold)]">{t("product.compare")}</p>
@@ -57,6 +57,7 @@ export default function Compare() {
       ) : products && products.length > 1 ? (
         <div className="mt-8 overflow-x-auto">
           <table className="w-full min-w-[720px] border-collapse text-sm">
+            <caption className="sr-only">{t("product.compareTitle")}</caption>
             <thead>
               <tr>
                 <th className="w-40 border-b border-[var(--line)] p-3 text-left font-mono text-xs uppercase tracking-widest text-[var(--text-2)]" />
@@ -73,21 +74,21 @@ export default function Compare() {
                       </button>
                     </div>
                     {p.img ? (
-                      <Link to={`/product/${p.slug}`}>
-                        <img src={p.img} alt="" className="mx-auto aspect-square w-32 rounded-xl object-cover" />
+                      <Link to={`/product/${p.slug}`} aria-label={p.nameFr}>
+                        <img src={p.img} alt={p.nameFr} loading="lazy" decoding="async" className="mx-auto aspect-square w-32 rounded-xl object-cover" />
                       </Link>
                     ) : (
-                      <div className="mx-auto aspect-square w-32 rounded-xl bg-[#0a1020]" />
+                      <div className="mx-auto aspect-square w-32 rounded-xl bg-[var(--page-soft)]" />
                     )}
                     <Link to={`/product/${p.slug}`} className="mt-2 block font-hud text-sm font-bold text-[var(--text-1)] hover:text-[var(--gold)]">
-                      {locale === "ar" ? p.nameAr : p.nameFr}
+                      {p.nameFr}
                     </Link>
-                    <p className="price-mono mt-1 text-lg">{formatPrice(p.price)} MAD</p>
-                    {p.oldPrice ? <p className="price-mono text-xs text-[var(--text-2)] line-through">{formatPrice(p.oldPrice)} MAD</p> : null}
+                    <p className="price-mono mt-1 text-lg">{formatPrice(p.price)}</p>
+                    {p.oldPrice ? <p className="price-mono text-xs text-[var(--text-2)] line-through">{formatPrice(p.oldPrice)}</p> : null}
                     <button
                       type="button"
                       onClick={() => {
-                        add({ productId: p.id, slug: p.slug, nameFr: p.nameFr, nameAr: p.nameAr, price: p.price, oldPrice: p.oldPrice, img: p.img, stock: p.stock });
+                        add({ productId: p.id, slug: p.slug, nameFr: p.nameFr, price: p.price, oldPrice: p.oldPrice, img: p.img, stock: p.stock });
                         setOpen(true);
                       }}
                       disabled={p.stock <= 0}

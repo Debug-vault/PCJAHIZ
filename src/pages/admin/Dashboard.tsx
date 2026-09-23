@@ -3,6 +3,8 @@ import { Box, ShoppingBag, Users, Star, Banknote, AlertTriangle, Loader2 } from 
 import { trpc } from "@/providers/trpc";
 import { useI18n } from "@/lib/i18n";
 
+import { PageHeader } from "@/components/admin/PageHeader";
+
 export default function Dashboard() {
   const { data, isLoading } = trpc.admin.dashboard.useQuery();
   const { formatPrice } = useI18n();
@@ -16,26 +18,23 @@ export default function Dashboard() {
   }
 
   const cards = [
-    { label: "Produits", value: String(data.activeProductCount), sub: `${data.productCount} au total`, icon: Box },
-    { label: "Commandes", value: String(data.orderCount), sub: "toutes", icon: ShoppingBag },
-    { label: "Chiffre d'affaires", value: formatPrice(data.revenue), sub: "hors annulées", icon: Banknote },
-    { label: "Clients", value: String(data.customerCount), sub: "comptes", icon: Users },
-    { label: "Avis en attente", value: String(data.pendingReviewCount), sub: "à modérer", icon: Star },
+    { label: "Products", value: String(data.activeProductCount), sub: `${data.productCount} total`, icon: Box },
+    { label: "Orders", value: String(data.orderCount), sub: "all", icon: ShoppingBag },
+    { label: "Revenue", value: formatPrice(data.revenue), sub: "excl. cancelled", icon: Banknote },
+    { label: "Customers", value: String(data.customerCount), sub: "accounts", icon: Users },
+    { label: "Pending Reviews", value: String(data.pendingReviewCount), sub: "to moderate", icon: Star },
   ];
 
   const statusLabel: Record<string, string> = {
-    preparing: "Préparation",
-    in_transit: "En transit",
-    landed: "Livrée",
-    cancelled: "Annulée",
+    preparing: "Preparing",
+    in_transit: "In Transit",
+    landed: "Delivered",
+    cancelled: "Cancelled",
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-hud text-2xl font-bold">Tableau de bord</h1>
-        <p className="text-sm text-[var(--text-2)]">Vue d'ensemble de la station.</p>
-      </div>
+      <PageHeader title="Dashboard" subtitle="Overview of your store." />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         {cards.map((c) => (
@@ -52,7 +51,7 @@ export default function Dashboard() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5">
-          <h2 className="mb-4 font-hud text-base font-bold">Dernières commandes</h2>
+          <h2 className="mb-4 font-hud text-base font-bold">Recent Orders</h2>
           <div className="space-y-2">
             {data.recentOrders.map((o) => (
               <Link
@@ -73,13 +72,13 @@ export default function Dashboard() {
               </Link>
             ))}
             {data.recentOrders.length === 0 && (
-              <p className="text-sm text-[var(--text-2)]">Aucune commande pour le moment.</p>
+              <p className="text-sm text-[var(--text-2)]">No orders yet.</p>
             )}
           </div>
         </section>
 
         <section className="rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5">
-          <h2 className="mb-4 font-hud text-base font-bold">Stock faible</h2>
+          <h2 className="mb-4 font-hud text-base font-bold">Low Stock</h2>
           <div className="space-y-2">
             {data.lowStock.map((p) => (
               <div key={p.id} className="flex items-center justify-between rounded-lg border border-[var(--line)] px-3 py-2 text-sm">
@@ -87,24 +86,24 @@ export default function Dashboard() {
                   <AlertTriangle className="h-4 w-4 text-[var(--alert)]" />
                   <span>{p.nameFr}</span>
                 </div>
-                <span className="font-mono text-[var(--alert)]">{p.stock} restant(s)</span>
+                <span className="font-mono text-[var(--alert)]">{p.stock} remaining</span>
               </div>
             ))}
-            {data.lowStock.length === 0 && <p className="text-sm text-[var(--text-2)]">Stocks sains.</p>}
+            {data.lowStock.length === 0 && <p className="text-sm text-[var(--text-2)]">Stock is healthy.</p>}
           </div>
         </section>
       </div>
 
       <section className="rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5">
-        <h2 className="mb-4 font-hud text-base font-bold">Top produits vendus</h2>
+        <h2 className="mb-4 font-hud text-base font-bold">Top Selling Products</h2>
         <div className="space-y-2">
           {data.topProducts.map((tp, i) => (
             <div key={i} className="flex items-center justify-between rounded-lg border border-[var(--line)] px-3 py-2 text-sm">
               <span className="truncate">{tp.name}</span>
-              <span className="font-mono text-[var(--text-2)]">{tp.qty} vendus · {formatPrice(Number(tp.total))}</span>
+              <span className="font-mono text-[var(--text-2)]">{tp.qty} sold · {formatPrice(Number(tp.total))}</span>
             </div>
           ))}
-          {data.topProducts.length === 0 && <p className="text-sm text-[var(--text-2)]">Aucune vente enregistrée.</p>}
+          {data.topProducts.length === 0 && <p className="text-sm text-[var(--text-2)]">No sales recorded.</p>}
         </div>
       </section>
     </div>

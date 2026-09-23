@@ -12,10 +12,15 @@ import {
   shippingZones,
   promoCodes,
   settings,
+  campaigns,
+  storeLocations,
+  newsletterSubscribers,
+  quoteRequests,
+  blogPosts,
+  blogCategories,
 } from "@db/schema";
-import { eq, and, desc, asc, or, ilike, gte, lte, inArray, ne, type SQL } from "drizzle-orm";
+import { eq, and, desc, asc, or, ilike, gte, lte, inArray, ne, sql, isNotNull, type SQL } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { env } from "./lib/env";
 
 const listInput = z.object({
   q: z.string().optional(),
@@ -24,6 +29,7 @@ const listInput = z.object({
   minPrice: z.number().optional(),
   maxPrice: z.number().optional(),
   sort: z.enum(["price-asc", "price-desc", "newest", "popular"]).optional(),
+  limit: z.number().int().min(1).max(60).optional(),
 });
 
 function productCard(p: typeof products.$inferSelect) {
@@ -32,9 +38,8 @@ function productCard(p: typeof products.$inferSelect) {
     id: p.id,
     slug: p.slug,
     nameFr: p.nameFr,
-    nameAr: p.nameAr,
     summaryFr: p.summaryFr,
-    summaryAr: p.summaryAr,
+    descriptionFr: p.descriptionFr,
     price: p.price,
     oldPrice: p.oldPrice,
     discount: p.discount,
@@ -46,17 +51,32 @@ function productCard(p: typeof products.$inferSelect) {
     isNew: p.isNew,
     popularity: p.popularity,
     warrantyMonths: p.warrantyMonths,
+    specs: (Array.isArray(p.specs) ? p.specs : []) as { k: string; v: string }[],
   };
 }
 
 export const shopRouter = createRouter({
-  categories: publicQuery.query(() =>
-    getDb()
+  categories: publicQuery.query(async () => {
+    const cats = await getDb()
       .select()
       .from(categories)
       .where(eq(categories.active, true))
-      .orderBy(asc(categories.deck), asc(categories.sortOrder)),
-  ),
+      .orderBy(asc(categories.deck), asc(categories.sortOrder));
+    const prodRows = await getDb()
+      .select({ slug: products.categorySlug })
+      .from(products)
+      .where(eq(products.active, true));
+    const direct: Record<string, number> = {};
+    for (const r of prodRows) {
+      if (r.slug) direct[r.slug] = (direct[r.slug] ?? 0) + 1;
+    }
+    const totalFor = (slug: string): number => {
+      let t = direct[slug] ?? 0;
+      for (const c of cats) if (c.parentSlug === slug) t += totalFor(c.slug);
+      return t;
+    };
+    return cats.map((c) => ({ ...c, productCount: totalFor(c.slug) }));
+  }),
 
   brands: publicQuery.query(() =>
     getDb()
@@ -74,6 +94,14 @@ export const shopRouter = createRouter({
       .orderBy(asc(brands.sortOrder)),
   ),
 
+  brandCategories: publicQuery.query(async () => {
+    const rows = await getDb()
+      .selectDistinct({ brandSlug: products.brandSlug, categorySlug: products.categorySlug })
+      .from(products)
+      .where(and(eq(products.active, true), isNotNull(products.brandSlug)));
+    return rows as { brandSlug: string; categorySlug: string }[];
+  }),
+
   settings: publicQuery.query(async () => {
     const rows = await getDb().select().from(settings).orderBy(asc(settings.key));
     const map: Record<string, unknown> = {};
@@ -81,15 +109,43 @@ export const shopRouter = createRouter({
     return map;
   }),
 
+  stats: publicQuery.query(async () => {
+    const db = getDb();
+    const [prodCount] = await db.select({ n: sql<number>`count(*)::int` }).from(products).where(eq(products.active, true));
+    const [brandCount] = await db.select({ n: sql<number>`count(*)::int` }).from(brands).where(eq(brands.active, true));
+    const [catCount] = await db.select({ n: sql<number>`count(*)::int` }).from(categories).where(eq(categories.active, true));
+    const [orderCount] = await db.select({ n: sql<number>`count(*)::int` }).from(orders);
+    const [reviewAvg] = await db.select({ avg: sql<number>`coalesce(avg(${reviews.rating}), 4.6)::numeric(2,1)` }).from(reviews);
+    const [reviewCount] = await db.select({ n: sql<number>`count(*)::int` }).from(reviews);
+    return {
+      products: prodCount?.n ?? 0,
+      brands: brandCount?.n ?? 0,
+      categories: catCount?.n ?? 0,
+      orders: orderCount?.n ?? 0,
+      rating: Number(reviewAvg?.avg ?? 4.6),
+      reviews: reviewCount?.n ?? 0,
+    };
+  }),
+
   list: publicQuery.input(listInput).query(async ({ input }) => {
     const conds: (SQL | undefined)[] = [eq(products.active, true)];
-    if (input.category) conds.push(eq(products.categorySlug, input.category));
+    if (input.category) {
+      const allCats = await getDb()
+        .select({ slug: categories.slug, parentSlug: categories.parentSlug })
+        .from(categories);
+      const slugsFor = (root: string): string[] => {
+        const out = [root];
+        for (const c of allCats) if (c.parentSlug === root) out.push(...slugsFor(c.slug));
+        return out;
+      };
+      conds.push(inArray(products.categorySlug, slugsFor(input.category)));
+    }
     if (input.brand) conds.push(eq(products.brandSlug, input.brand));
     if (input.minPrice != null) conds.push(gte(products.price, input.minPrice));
     if (input.maxPrice != null) conds.push(lte(products.price, input.maxPrice));
     if (input.q) {
-      const q = `%${input.q}%`;
-      conds.push(or(ilike(products.nameFr, q), ilike(products.nameAr, q)));
+      const q = `${input.q}%`;
+      conds.push(or(ilike(products.nameFr, q), ilike(products.summaryFr, q)));
     }
     const order =
       input.sort === "price-asc"
@@ -103,7 +159,8 @@ export const shopRouter = createRouter({
       .select()
       .from(products)
       .where(conds.length ? and(...conds) : undefined)
-      .orderBy(order);
+      .orderBy(order)
+      .limit(input.limit ?? 200);
     return rows.map(productCard);
   }),
 
@@ -132,7 +189,7 @@ export const shopRouter = createRouter({
       const rows = await getDb()
         .select()
         .from(products)
-        .where(and(eq(products.active, true), or(ilike(products.nameFr, q), ilike(products.nameAr, q))))
+        .where(and(eq(products.active, true), or(ilike(products.nameFr, q), ilike(products.summaryFr, q))))
         .orderBy(desc(products.popularity))
         .limit(12);
       return rows.map(productCard);
@@ -209,12 +266,55 @@ export const shopRouter = createRouter({
       .orderBy(asc(shippingZones.sortOrder)),
   ),
 
-  paymentConfig: publicQuery.query(() => ({
-    cod: true,
-    cmi: Boolean(env.cmiMerchantId && env.cmiStoreKey),
-    cmiShopName: env.cmiShopName,
-    cmiApiUrl: env.cmiApiUrl,
-  })),
+  campaigns: publicQuery.query(() =>
+    getDb()
+      .select()
+      .from(campaigns)
+      .where(eq(campaigns.active, true))
+      .orderBy(asc(campaigns.sortOrder)),
+  ),
+
+  storeLocations: publicQuery.query(() =>
+    getDb()
+      .select()
+      .from(storeLocations)
+      .where(eq(storeLocations.active, true))
+      .orderBy(asc(storeLocations.sortOrder)),
+  ),
+
+  subscribeNewsletter: publicQuery
+    .input(z.object({ email: z.string().email() }))
+    .mutation(async ({ input }) => {
+      const existing = await getDb().query.newsletterSubscribers.findFirst({
+        where: eq(newsletterSubscribers.email, input.email.toLowerCase()),
+      });
+      if (existing) return { ok: true, already: true };
+      await getDb().insert(newsletterSubscribers).values({
+        email: input.email.toLowerCase(),
+      });
+      return { ok: true, already: false };
+    }),
+
+  createQuoteRequest: publicQuery
+    .input(
+      z.object({
+        name: z.string().min(2),
+        email: z.string().email(),
+        phone: z.string().optional(),
+        company: z.string().optional(),
+        details: z.string().min(10).optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await getDb().insert(quoteRequests).values({
+        name: input.name,
+        email: input.email,
+        phone: input.phone ?? null,
+        company: input.company ?? null,
+        details: input.details ?? null,
+      });
+      return { ok: true };
+    }),
 
   validatePromo: publicQuery
     .input(z.object({ code: z.string(), subtotal: z.number() }))
@@ -252,7 +352,7 @@ export const shopRouter = createRouter({
         region: z.string().optional(),
         address: z.string().min(5),
         notes: z.string().optional(),
-        payment: z.enum(["cod", "cmi"]),
+        payment: z.enum(["cod"]),
         promoCode: z.string().optional(),
         items: z.array(z.object({ productId: z.string(), qty: z.number().min(1) })).min(1),
       }),
@@ -319,8 +419,8 @@ export const shopRouter = createRouter({
           shippingFee: effectiveShipping,
           discount,
           total,
-          payment: input.payment,
-          paymentStatus: input.payment === "cmi" ? "pending" : "pending",
+          payment: "cod",
+          paymentStatus: "pending",
           promoCode: input.promoCode?.toUpperCase() ?? null,
         })
         .returning({ id: orders.id });
@@ -333,25 +433,12 @@ export const shopRouter = createRouter({
             productId: item.productId,
             sku: p?.sku ?? null,
             nameFr: p?.nameFr ?? "Module",
-            nameAr: p?.nameAr ?? "وحدة",
             unitPrice: p?.price ?? 0,
             quantity: item.qty,
             total: (p?.price ?? 0) * item.qty,
           };
         }),
       );
-
-      if (input.payment === "cmi") {
-        // CMI form payload — client builds the redirected form.
-        const { createCmiFormParams } = await import("./cmi");
-        const params = await createCmiFormParams({
-          orderRef: ref,
-          amount: total,
-          currency: "504",
-          shopName: env.cmiShopName,
-        });
-        return { ref, total, orderId, cmiParams: params };
-      }
 
       return { ref, total, orderId };
     }),
@@ -406,4 +493,63 @@ export const shopRouter = createRouter({
       await db.insert(wishlist).values({ userId: ctx.user.id, productId: input.productId });
       return { wished: true };
     }),
+
+  bestSellers: publicQuery
+    .input(z.object({ category: z.string().optional(), limit: z.number().optional() }).optional())
+    .query(async ({ input }) => {
+      const conds: SQL[] = [eq(products.active, true)];
+      if (input?.category) {
+        const allCats = await getDb()
+          .select({ slug: categories.slug, parentSlug: categories.parentSlug })
+          .from(categories);
+        const slugsFor = (root: string): string[] => {
+          const out = [root];
+          for (const c of allCats) if (c.parentSlug === root) out.push(...slugsFor(c.slug));
+          return out;
+        };
+        conds.push(inArray(products.categorySlug, slugsFor(input.category)));
+      }
+      const rows = await getDb()
+        .select()
+        .from(products)
+        .where(and(...conds))
+        .orderBy(desc(products.popularity))
+        .limit(input?.limit ?? 50);
+      return rows.map(productCard);
+    }),
+
+  bestSellerCategories: publicQuery.query(async () => {
+    const allCats = await getDb()
+      .select({ slug: categories.slug, nameFr: categories.nameFr, parentSlug: categories.parentSlug })
+      .from(categories)
+      .orderBy(asc(categories.sortOrder));
+    const topLevel = allCats.filter((c) => !c.parentSlug);
+    const results: { slug: string; nameFr: string; count: number }[] = [];
+    for (const cat of topLevel) {
+      const childSlugs = [cat.slug, ...allCats.filter((c) => c.parentSlug === cat.slug).map((c) => c.slug)];
+      const [{ count }] = await getDb()
+        .select({ count: sql<number>`count(*)::int` })
+        .from(products)
+        .where(and(inArray(products.categorySlug, childSlugs), eq(products.active, true)));
+      if (count > 0) results.push({ slug: cat.slug, nameFr: cat.nameFr, count });
+    }
+    return results;
+  }),
+
+  // ===== Blog (public) =====
+  blog: publicQuery.query(() =>
+    getDb()
+      .select()
+      .from(blogPosts)
+      .where(eq(blogPosts.status, "published"))
+      .orderBy(desc(blogPosts.publishedAt)),
+  ),
+  blogBySlug: publicQuery.input(z.object({ slug: z.string() })).query(async ({ input }) => {
+    const [post] = await getDb()
+      .select()
+      .from(blogPosts)
+      .where(and(eq(blogPosts.slug, input.slug), eq(blogPosts.status, "published")));
+    return post ?? null;
+  }),
+  blogCategories: publicQuery.query(() => getDb().select().from(blogCategories)),
 });

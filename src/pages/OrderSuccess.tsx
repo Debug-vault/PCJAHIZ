@@ -31,7 +31,7 @@ export default function OrderSuccess() {
         {order ? (
           <div className="mt-4 rounded-xl border border-[var(--line)] bg-[rgba(6,11,24,0.6)] p-4">
             <p className="font-mono text-xs uppercase tracking-widest text-[var(--text-2)]">{t("cart.total")}</p>
-            <p className="price-mono mt-1 text-xl">{formatPrice(order.total)} MAD</p>
+            <p className="price-mono mt-1 text-xl">{formatPrice(order.total)}</p>
           </div>
         ) : null}
 

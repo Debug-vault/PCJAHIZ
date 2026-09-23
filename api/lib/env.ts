@@ -26,10 +26,9 @@ export const env = {
   storageAccessKey: process.env.STORAGE_ACCESS_KEY ?? "",
   storageSecretKey: process.env.STORAGE_SECRET_KEY ?? "",
   geminiApiKey: process.env.GEMINI_API_KEY ?? "",
-  cmiMerchantId: process.env.CMI_MERCHANT_ID ?? "",
-  cmiStoreKey: process.env.CMI_STORE_KEY ?? "",
-  cmiApiUrl: process.env.CMI_API_URL ?? "https://testsecure.vcs.payments.com/prm.action",
-  cmiShopName: process.env.CMI_SHOP_NAME ?? "PC Jahiz",
+  openCodeZenApiKey: process.env.OPENCODE_ZEN_API_KEY ?? "",
+  openCodeZenModel: process.env.OPENCODE_ZEN_MODEL ?? "nemotron-3-ultra-free",
+  reseed: process.env.RESEED ?? "",
 };
 
 export type Env = typeof env;

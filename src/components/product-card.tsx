@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Link } from "react-router";
 import { ShoppingCart, GitCompareArrows } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -7,23 +8,24 @@ import type { ProductCardData } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export function ProductCard({ product }: { product: ProductCardData }) {
-  const { t, locale, formatPrice } = useI18n();
+export const ProductCard = memo(function ProductCard({ product }: { product: ProductCardData }) {
+  const { t, formatPrice } = useI18n();
   const add = useCartStore((s) => s.add);
   const setOpen = useCartStore((s) => s.setOpen);
   const compare = useCompare();
-  const name = locale === "ar" ? product.nameAr : product.nameFr;
-  const summary = locale === "ar" ? product.summaryAr : product.summaryFr;
+  const name = product.nameFr;
+  const summary = product.summaryFr;
   const inCompare = compare.has(product.id);
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-500 hover:border-[rgba(253,213,2,0.4)] hover:shadow-[var(--glow-gold)]">
-      <Link to={`/product/${product.slug}`} className="relative block aspect-square overflow-hidden bg-[#0a1020]">
+      <Link to={`/product/${product.slug}`} className="relative block aspect-square overflow-hidden bg-[var(--page-soft)]">
         {product.img ? (
           <img
             src={product.img}
             alt={name}
             loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
         ) : (
@@ -33,10 +35,10 @@ export function ProductCard({ product }: { product: ProductCardData }) {
         )}
         <div className="absolute left-3 top-3 flex flex-col gap-2">
           {product.discount ? (
-            <Badge variant="gold">-{product.discount}%</Badge>
+            <Badge variant="discount">-{product.discount}%</Badge>
           ) : null}
           {product.isNew ? (
-            <Badge variant="secondary">{t("common.newArrivals")}</Badge>
+            <Badge variant="new">NEW</Badge>
           ) : null}
         </div>
       </Link>
@@ -57,7 +59,6 @@ export function ProductCard({ product }: { product: ProductCardData }) {
             <span className="font-mono text-xs text-muted-foreground line-through">
               {product.oldPrice ? formatPrice(product.oldPrice) : ""}
             </span>
-            <span className="font-mono text-[10px] uppercase text-muted-foreground">MAD</span>
           </div>
         </div>
 
@@ -69,7 +70,6 @@ export function ProductCard({ product }: { product: ProductCardData }) {
                 productId: product.id,
                 slug: product.slug,
                 nameFr: product.nameFr,
-                nameAr: product.nameAr,
                 price: product.price,
                 oldPrice: product.oldPrice,
                 img: product.img,
@@ -101,4 +101,4 @@ export function ProductCard({ product }: { product: ProductCardData }) {
       </div>
     </div>
   );
-}
+});

@@ -1,8 +1,8 @@
 import path from "node:path";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { getDb } from "./queries/connection";
-import { categories, brands, products, reviews, users } from "@db/schema";
-import { CATS, BRANDS, PRODUCTS, REVIEWS } from "./seed-data";
+import { categories, brands, products, reviews, users, campaigns, storeLocations } from "@db/schema";
+import { CATS, BRANDS, ALL_PRODUCTS, REVIEWS, CAMPAIGNS, STORE_LOCATIONS } from "./seed-data";
 import { hashPassword } from "./lib/auth";
 import { eq } from "drizzle-orm";
 import { env } from "./lib/env";
@@ -12,12 +12,26 @@ let bootPromise: Promise<void> | null = null;
 async function seedIfEmpty() {
   const db = getDb();
   const existing = await db.select({ id: products.id }).from(products).limit(1);
-  if (existing.length > 0) return;
+  const reseed = env.reseed === "true" || env.reseed === "1";
 
-  console.log("[bootstrap] Empty catalog — seeding…");
+  if (existing.length > 0 && !reseed) return;
+
+  if (reseed && existing.length > 0) {
+    console.log("[bootstrap] RESEED requested — clearing catalog…");
+    await db.delete(reviews);
+    await db.delete(products);
+    await db.delete(campaigns);
+    await db.delete(storeLocations);
+    await db.delete(categories);
+    await db.delete(brands);
+  }
+
+  console.log("[bootstrap] Seeding catalog…");
   await db.insert(categories).values(CATS);
   await db.insert(brands).values(BRANDS);
-  await db.insert(products).values(PRODUCTS);
+  await db.insert(products).values(ALL_PRODUCTS);
+  await db.insert(campaigns).values(CAMPAIGNS);
+  await db.insert(storeLocations).values(STORE_LOCATIONS);
 
   for (const r of REVIEWS) {
     const prod = await db.query.products.findFirst({

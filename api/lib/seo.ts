@@ -6,7 +6,7 @@ import { env } from "./env";
 export type SeoBundle = {
   title: string;
   description: string;
-  lang: "fr" | "ar";
+  lang: "fr";
   jsonLd: Record<string, unknown>[];
 };
 
@@ -46,9 +46,9 @@ export async function buildSeo(url: URL): Promise<SeoBundle | null> {
 
   const home: SeoBundle = {
     lang: "fr",
-    title: "PC Jahiz — L'Orbitale · High-Tech Maroc",
+    title: "PC Jahiz — High-Tech Maroc",
     description:
-      "PC Jahiz — Station orbitale du high-tech marocain. Prix en dirhams, drop-pod 24–48h partout au Maroc, paiement à l'atterrissage ou par carte.",
+      "PC Jahiz — High-tech au Maroc. Prix en dirhams, livraison 24–48h partout au Maroc, paiement à la livraison.",
     jsonLd: [],
   };
 
@@ -197,8 +197,6 @@ export function seoHead(bundle: SeoBundle, url: URL): string {
     `<meta name="description" content="${safe.description}" />`,
     `<link rel="canonical" href="${esc(canonical)}" />`,
     `<link rel="alternate" hreflang="fr" href="${esc(canonical)}" />`,
-    `<link rel="alternate" hreflang="ar" href="${esc(canonical)}" />`,
-    `<link rel="alternate" hreflang="x-default" href="${esc(canonical)}" />`,
     `<meta property="og:type" content="website" />`,
     `<meta property="og:title" content="${safe.title}" />`,
     `<meta property="og:description" content="${safe.description}" />`,

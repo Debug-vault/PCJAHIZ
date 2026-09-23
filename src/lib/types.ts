@@ -2,9 +2,8 @@ export type ProductCardData = {
   id: string;
   slug: string;
   nameFr: string;
-  nameAr: string;
   summaryFr: string | null;
-  summaryAr: string | null;
+  descriptionFr: string | null;
   price: number;
   oldPrice: number | null;
   discount: number | null;
@@ -16,6 +15,36 @@ export type ProductCardData = {
   isNew: boolean;
   popularity: number;
   warrantyMonths: number;
+  specs: { k: string; v: string }[];
+};
+
+export type ProductVariantType = "color" | "ram" | "storage" | "processor" | "screen" | "os" | "gpu" | "finish" | "size" | "capacity";
+
+export type ProductVariantOption = {
+  label: string;
+  value: string;
+  hex?: string;
+  image?: string;
+  priceDiff?: number;
+  stock?: number;
+  sku?: string;
+};
+
+export type ProductVariant = {
+  type: ProductVariantType;
+  label: string;
+  options: ProductVariantOption[];
+};
+
+export type ProductSection = {
+  id: string;
+  title: string;
+  icon: string;
+  text: string;
+  visual: {
+    type: "gauges" | "bars" | "icons" | "specs-grid";
+    items: { label: string; value: number; max?: number; icon?: string }[];
+  } | null;
 };
 
 export type ProductDetailData = {
@@ -24,17 +53,11 @@ export type ProductDetailData = {
     slug: string;
     sku: string;
     nameFr: string;
-    nameAr: string;
     summaryFr: string | null;
-    summaryAr: string | null;
     descriptionFr: string | null;
-    descriptionAr: string | null;
     seoTitleFr: string | null;
-    seoTitleAr: string | null;
     seoDescriptionFr: string | null;
-    seoDescriptionAr: string | null;
     faqFr: { q: string; a: string }[] | null;
-    faqAr: { q: string; a: string }[] | null;
     brandSlug: string | null;
     categorySlug: string | null;
     price: number;
@@ -44,6 +67,8 @@ export type ProductDetailData = {
     img: string | null;
     images: string[];
     specs: { k: string; v: string }[] | null;
+    sectionsFr: ProductSection[] | null;
+    variants: ProductVariant[] | null;
     stock: number;
     featured: boolean;
     isNew: boolean;

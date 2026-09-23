@@ -1,12 +1,10 @@
-import { useI18n } from "@/lib/i18n";
 import { useStoreSettings } from "@/lib/settings";
 
 export function Marquee() {
-  const { locale } = useI18n();
   const { settings } = useStoreSettings();
   if (!settings.marqueeEnabled) return null;
 
-  const items = settings.marqueeItems.map((i) => (locale === "ar" ? i.ar : i.fr));
+  const items = settings.marqueeItems;
 
   return (
     <div

@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 
 export function CargoDrawer() {
   const { open, setOpen, items, remove, setQty, subtotal, count } = useCartStore();
-  const { t, locale, formatPrice } = useI18n();
+  const { t, formatPrice } = useI18n();
 
   const freeThreshold = 1000;
   const progress = Math.min(100, (subtotal() / freeThreshold) * 100);
@@ -15,7 +15,7 @@ export function CargoDrawer() {
     <Drawer.Root open={open} onOpenChange={setOpen} direction="right">
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
-        <Drawer.Content className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-[var(--line)] bg-[#0b1226] outline-none" aria-label={t("cart.title")}>
+        <Drawer.Content className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-[var(--line)] bg-[var(--glass-solid)] outline-none" aria-label={t("cart.title")}>
           <Drawer.Title className="sr-only">{t("cart.title")}</Drawer.Title>
           <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-4">
             <div>
@@ -65,7 +65,7 @@ export function CargoDrawer() {
                 {items.map((item) => (
                   <li key={item.productId} className="flex gap-3 rounded-xl border border-[var(--line)] bg-[rgba(6,11,24,0.5)] p-3">
                     {item.img ? (
-                      <img src={item.img} alt={locale === "ar" ? item.nameAr : item.nameFr} className="h-20 w-20 shrink-0 rounded-lg object-cover" />
+                      <img src={item.img} alt={item.nameFr} className="h-20 w-20 shrink-0 rounded-lg object-cover" />
                     ) : (
                       <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-[var(--glass)] font-mono text-[10px] uppercase text-[var(--text-2)]">
                         {item.slug}
@@ -78,7 +78,7 @@ export function CargoDrawer() {
                           onClick={() => setOpen(false)}
                           className="line-clamp-2 text-sm font-semibold text-[var(--text-1)] hover:text-[var(--gold)]"
                         >
-                          {locale === "ar" ? item.nameAr : item.nameFr}
+                          {item.nameFr}
                         </Link>
                         <button
                           type="button"
@@ -109,7 +109,7 @@ export function CargoDrawer() {
                             <Plus className="h-3.5 w-3.5" />
                           </button>
                         </div>
-                        <span className="price-mono text-sm">{formatPrice(item.price * item.qty)} MAD</span>
+                        <span className="price-mono text-sm">{formatPrice(item.price * item.qty)}</span>
                       </div>
                     </div>
                   </li>
@@ -122,7 +122,7 @@ export function CargoDrawer() {
             <div className="border-t border-[var(--line)] px-5 py-4">
               <div className="mb-3 flex items-center justify-between">
                 <span className="font-hud text-sm font-semibold text-[var(--text-2)]">{t("cart.subtotal")}</span>
-                <span className="price-mono text-xl">{formatPrice(subtotal())} MAD</span>
+                <span className="price-mono text-xl">{formatPrice(subtotal())}</span>
               </div>
               <Link to="/checkout" onClick={() => setOpen(false)} className="btn-dock w-full text-sm">
                 {t("cart.checkout")}

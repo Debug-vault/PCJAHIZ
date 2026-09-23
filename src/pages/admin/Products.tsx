@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, Pencil, Search, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Search, Trash2, Loader2, Sparkles } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -30,11 +30,8 @@ function defaultProduct(): Record<string, unknown> {
     slug: "",
     sku: "",
     nameFr: "",
-    nameAr: "",
     summaryFr: "",
-    summaryAr: "",
     descriptionFr: "",
-    descriptionAr: "",
     price: 0,
     oldPrice: null,
     discount: null,
@@ -51,7 +48,6 @@ function defaultProduct(): Record<string, unknown> {
     images: [] as Images,
     specs: [] as Specs,
     faqFr: [] as FaqItem[],
-    faqAr: [] as FaqItem[],
   };
 }
 
@@ -94,14 +90,95 @@ function ProductForm({
       images: (initial.images as Images) ?? [],
       specs: (initial.specs as Specs) ?? [],
       faqFr: (initial.faqFr as FaqItem[]) ?? [],
-      faqAr: (initial.faqAr as FaqItem[]) ?? [],
+      sectionsFr: (initial as any).sectionsFr ?? [],
+      variants: (initial as any).variants ?? [],
     };
   });
   const [imgInput, setImgInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiReference, setAiReference] = useState("");
+  const generateProduct = trpc.ai.generateProduct.useMutation();
+  const improveProduct = trpc.ai.improveProduct.useMutation();
+  const generateSeo = trpc.ai.generateSeo.useMutation();
 
   const set = (k: string, v: unknown) => setF((s) => ({ ...s, [k]: v }));
+
+  const handleAiGenerate = async () => {
+    const name = String(f.nameFr || "").trim();
+    const ref = aiReference.trim();
+    if (!name && !ref) { setError("Enter a product name or paste a URL/SKU as reference."); return; }
+    setAiLoading(true);
+    try {
+      const result = await generateProduct.mutateAsync({
+        name: name || ref,
+        brand: String(f.brandSlug || "") || undefined,
+        category: String(f.categorySlug || "") || undefined,
+        price: num("price"),
+        referenceUrl: ref || undefined,
+      });
+      const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      const autoSlug = slugify(result.nameFr || name);
+      setF((s) => ({
+        ...s,
+        slug: autoSlug,
+        sku: (result as any).sku || s.sku,
+        nameFr: result.nameFr || s.nameFr,
+        summaryFr: result.summaryFr || s.summaryFr,
+        descriptionFr: result.descriptionFr || s.descriptionFr,
+        seoTitleFr: result.seoTitleFr || s.seoTitleFr,
+        seoDescriptionFr: result.seoDescriptionFr || s.seoDescriptionFr,
+        specs: result.specs?.length ? result.specs : s.specs,
+        faqFr: result.faqFr?.length ? result.faqFr : s.faqFr,
+        sectionsFr: (result as any).sectionsFr?.length ? (result as any).sectionsFr : s.sectionsFr,
+        variants: (result as any).variants?.length ? (result as any).variants : s.variants,
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "AI error.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleAiImprove = async () => {
+    const desc = String(f.descriptionFr || "").trim();
+    if (!desc) { setError("Enter a description to improve first."); return; }
+    setAiLoading(true);
+    try {
+      const result = await improveProduct.mutateAsync({
+        name: String(f.nameFr),
+        currentDescription: desc,
+        currentSummary: String(f.summaryFr || ""),
+      });
+      set("descriptionFr", result.descriptionFr);
+      if (result.summaryFr) set("summaryFr", result.summaryFr);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "AI error.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleAiSeo = async () => {
+    const name = String(f.nameFr || "").trim();
+    if (!name) { setError("Enter a product name first."); return; }
+    setAiLoading(true);
+    try {
+      const result = await generateSeo.mutateAsync({
+        name,
+        type: "product",
+        brand: String(f.brandSlug || "") || undefined,
+        category: String(f.categorySlug || "") || undefined,
+      });
+      set("seoTitleFr", result.seoTitle);
+      set("seoDescriptionFr", result.seoDescription);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "AI error.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const addImage = () => {
     const url = imgInput.trim();
@@ -117,14 +194,14 @@ function ProductForm({
     set("specs", ((f.specs as Specs) ?? []).map((s, idx) => (idx === i ? { ...s, [k]: v } : s)));
   const delSpec = (i: number) => set("specs", ((f.specs as Specs) ?? []).filter((_, idx) => idx !== i));
 
-  const addFaq = (lang: "fr" | "ar") => set(`faq${lang === "fr" ? "Fr" : "Ar"}`, [...(((lang === "fr" ? f.faqFr : f.faqAr) as FaqItem[]) ?? []), { q: "", a: "" }]);
-  const setFaq = (lang: "fr" | "ar", i: number, k: string, v: string) => {
-    const key = lang === "fr" ? "faqFr" : "faqAr";
+  const addFaq = () => set("faqFr", [...((f.faqFr as FaqItem[]) ?? []), { q: "", a: "" }]);
+  const setFaq = (i: number, k: string, v: string) => {
+    const key = "faqFr";
     const list = (f[key] as FaqItem[]) ?? [];
     set(key, list.map((item, idx) => (idx === i ? { ...item, [k]: v } : item)));
   };
-  const delFaq = (lang: "fr" | "ar", i: number) => {
-    const key = lang === "fr" ? "faqFr" : "faqAr";
+  const delFaq = (i: number) => {
+    const key = "faqFr";
     set(key, ((f[key] as FaqItem[]) ?? []).filter((_, idx) => idx !== i));
   };
 
@@ -133,8 +210,8 @@ function ProductForm({
 
   const save = async () => {
     setError("");
-    if (!String(f.slug).trim() || !String(f.sku).trim() || !String(f.nameFr).trim() || !String(f.nameAr).trim()) {
-      setError("slug, sku, nom FR et nom AR sont obligatoires.");
+    if (!String(f.slug).trim() || !String(f.sku).trim() || !String(f.nameFr).trim()) {
+      setError("Slug, SKU, and name are required.");
       return;
     }
     setBusy(true);
@@ -142,15 +219,10 @@ function ProductForm({
       slug: String(f.slug).trim(),
       sku: String(f.sku).trim(),
       nameFr: String(f.nameFr).trim(),
-      nameAr: String(f.nameAr).trim(),
       summaryFr: (f.summaryFr as string) || null,
-      summaryAr: (f.summaryAr as string) || null,
       descriptionFr: (f.descriptionFr as string) || null,
-      descriptionAr: (f.descriptionAr as string) || null,
       seoTitleFr: (f.seoTitleFr as string) || null,
-      seoTitleAr: (f.seoTitleAr as string) || null,
       seoDescriptionFr: (f.seoDescriptionFr as string) || null,
-      seoDescriptionAr: (f.seoDescriptionAr as string) || null,
       brandSlug: (f.brandSlug as string) || null,
       categorySlug: (f.categorySlug as string) || null,
       price: num("price"),
@@ -161,7 +233,8 @@ function ProductForm({
       images: (f.images as Images) ?? [],
       specs: (f.specs as Specs)?.filter((s) => s.k.trim() || s.v.trim()) ?? [],
       faqFr: (f.faqFr as FaqItem[])?.filter((x) => x.q.trim() || x.a.trim()) ?? [],
-      faqAr: (f.faqAr as FaqItem[])?.filter((x) => x.q.trim() || x.a.trim()) ?? [],
+      sectionsFr: (f.sectionsFr as any) || null,
+      variants: (f.variants as any) || null,
       stock: num("stock"),
       lowStockThreshold: num("lowStockThreshold"),
       featured: bool("featured"),
@@ -177,7 +250,7 @@ function ProductForm({
         await create.mutateAsync(payload);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur lors de l'enregistrement.");
+      setError(err instanceof Error ? err.message : "Save error.");
     } finally {
       setBusy(false);
     }
@@ -187,11 +260,49 @@ function ProductForm({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{initial ? "Modifier le produit" : "Nouveau produit"}</DialogTitle>
-          <DialogDescription>Champs FR + AR. Slug et SKU uniques.</DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>{initial ? "Edit Product" : "New Product"}</DialogTitle>
+              <DialogDescription>French fields. Unique slug & SKU.</DialogDescription>
+            </div>
+            <Button type="button" onClick={save} disabled={busy}>
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-5">
+          {/* AI Generate Section */}
+          <div className="rounded-lg border border-[var(--gold-dim)] bg-[var(--gold-dim)]/30 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="h-4 w-4 text-[var(--gold)]" />
+              <span className="text-sm font-semibold text-[var(--gold)]">AI Generation</span>
+            </div>
+            <div className="mb-3">
+              <Input
+                value={aiReference}
+                onChange={(e) => setAiReference(e.target.value)}
+                placeholder="URL, SKU or product name (optional — to enrich generation)"
+                className="text-xs"
+              />
+              <p className="mt-1 text-[10px] text-[var(--text-2)]">
+                Paste a URL to extract data automatically, or a SKU/name as reference
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={handleAiGenerate} disabled={aiLoading}>
+                {aiLoading ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1 h-3.5 w-3.5" />}
+                Generate Sheet
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={handleAiImprove} disabled={aiLoading}>
+                Improve Description
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={handleAiSeo} disabled={aiLoading}>
+                Generate SEO
+              </Button>
+            </div>
+          </div>
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label>Slug</Label>
@@ -202,11 +313,11 @@ function ProductForm({
               <Input value={String(f.sku ?? "")} onChange={(e) => set("sku", e.target.value)} placeholder="JHZ-0001" />
             </div>
             <div className="space-y-1.5">
-              <Label>Prix (MAD)</Label>
+              <Label>Price (MAD)</Label>
               <Input type="number" value={num("price")} onChange={(e) => set("price", Number(e.target.value))} />
             </div>
             <div className="space-y-1.5">
-              <Label>Ancien prix</Label>
+              <Label>Old Price</Label>
               <Input type="number" value={f.oldPrice != null ? num("oldPrice") : ""} onChange={(e) => set("oldPrice", e.target.value === "" ? null : Number(e.target.value))} />
             </div>
             <div className="space-y-1.5">
@@ -214,11 +325,11 @@ function ProductForm({
               <Input type="number" value={num("stock")} onChange={(e) => set("stock", Number(e.target.value))} />
             </div>
             <div className="space-y-1.5">
-              <Label>Garantie (mois)</Label>
+              <Label>Warranty (months)</Label>
               <Input type="number" value={num("warrantyMonths")} onChange={(e) => set("warrantyMonths", Number(e.target.value))} />
             </div>
             <div className="space-y-1.5">
-              <Label>Marque</Label>
+              <Label>Brand</Label>
               <select
                 className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
                 value={String(f.brandSlug ?? "")}
@@ -231,7 +342,7 @@ function ProductForm({
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Catégorie</Label>
+              <Label>Category</Label>
               <select
                 className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
                 value={String(f.categorySlug ?? "")}
@@ -244,35 +355,23 @@ function ProductForm({
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Popularité</Label>
+              <Label>Popularity</Label>
               <Input type="number" value={num("popularity")} onChange={(e) => set("popularity", Number(e.target.value))} />
             </div>
           </section>
 
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Nom FR</Label>
+              <Label>Name</Label>
               <Input value={String(f.nameFr ?? "")} onChange={(e) => set("nameFr", e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Nom AR</Label>
-              <Input dir="rtl" value={String(f.nameAr ?? "")} onChange={(e) => set("nameAr", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Résumé FR</Label>
+              <Label>Summary</Label>
               <Textarea value={String(f.summaryFr ?? "")} onChange={(e) => set("summaryFr", e.target.value)} />
             </div>
-            <div className="space-y-1.5">
-              <Label>Résumé AR</Label>
-              <Textarea dir="rtl" value={String(f.summaryAr ?? "")} onChange={(e) => set("summaryAr", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Description FR</Label>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Description</Label>
               <Textarea rows={4} value={String(f.descriptionFr ?? "")} onChange={(e) => set("descriptionFr", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Description AR</Label>
-              <Textarea rows={4} dir="rtl" value={String(f.descriptionAr ?? "")} onChange={(e) => set("descriptionAr", e.target.value)} />
             </div>
           </section>
 
@@ -280,7 +379,7 @@ function ProductForm({
             <Label>Images</Label>
             <div className="flex gap-2">
               <Input value={imgInput} onChange={(e) => setImgInput(e.target.value)} placeholder="https://… (URL image)" />
-              <Button type="button" variant="outline" onClick={addImage}>Ajouter</Button>
+              <Button type="button" variant="outline" onClick={addImage}>Add</Button>
             </div>
             <div className="grid grid-cols-4 gap-2">
               {((f.images as Images) ?? []).map((url, i) => (
@@ -290,7 +389,7 @@ function ProductForm({
                     type="button"
                     className="absolute right-1 top-1 rounded bg-black/70 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
                     onClick={() => set("images", ((f.images as Images) ?? []).filter((_, idx) => idx !== i))}
-                    aria-label="Supprimer l'image"
+                    aria-label="Remove image"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
@@ -301,41 +400,123 @@ function ProductForm({
 
           <section className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Spécifications</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addSpec}>+ Ajouter</Button>
+              <Label>Specifications</Label>
+              <Button type="button" variant="outline" size="sm" onClick={addSpec}>+ Add</Button>
             </div>
             {((f.specs as Specs) ?? []).map((s, i) => (
               <div key={i} className="flex gap-2">
-                <Input placeholder="Clé (ex: Garantie)" value={s.k} onChange={(e) => setSpec(i, "k", e.target.value)} />
-                <Input placeholder="Valeur (ex: 12 mois)" value={s.v} onChange={(e) => setSpec(i, "v", e.target.value)} />
-                <Button type="button" variant="ghost" size="icon" onClick={() => delSpec(i)} aria-label="Supprimer">
+                <Input placeholder="Key (e.g. Warranty)" value={s.k} onChange={(e) => setSpec(i, "k", e.target.value)} />
+                <Input placeholder="Value (e.g. 12 months)" value={s.v} onChange={(e) => setSpec(i, "v", e.target.value)} />
+                <Button type="button" variant="ghost" size="icon" onClick={() => delSpec(i)} aria-label="Delete">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             ))}
           </section>
 
-          {(["fr", "ar"] as const).map((lang) => (
-            <section key={lang} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>FAQ ({lang.toUpperCase()})</Label>
-                <Button type="button" variant="outline" size="sm" onClick={() => addFaq(lang)}>+ Ajouter</Button>
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>FAQ</Label>
+              <Button type="button" variant="outline" size="sm" onClick={addFaq}>+ Add</Button>
+            </div>
+            {((f.faqFr as FaqItem[]) ?? []).map((item, i) => (
+              <div key={i} className="space-y-2 rounded-lg border border-[var(--line)] p-3">
+                <Input placeholder="Question" value={item.q} onChange={(e) => setFaq(i, "q", e.target.value)} />
+                <Textarea rows={2} placeholder="Answer" value={item.a} onChange={(e) => setFaq(i, "a", e.target.value)} />
+                <Button type="button" variant="ghost" size="sm" onClick={() => delFaq(i)}>Delete</Button>
               </div>
-              {(((lang === "fr" ? f.faqFr : f.faqAr) as FaqItem[]) ?? []).map((item, i) => (
-                <div key={i} className="space-y-2 rounded-lg border border-[var(--line)] p-3">
-                  <Input placeholder="Question" dir={lang === "ar" ? "rtl" : undefined} value={item.q} onChange={(e) => setFaq(lang, i, "q", e.target.value)} />
-                  <Textarea rows={2} placeholder="Réponse" dir={lang === "ar" ? "rtl" : undefined} value={item.a} onChange={(e) => setFaq(lang, i, "a", e.target.value)} />
-                  <Button type="button" variant="ghost" size="sm" onClick={() => delFaq(lang, i)}>Supprimer</Button>
+            ))}
+          </section>
+
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Variants</Label>
+              <Button type="button" variant="outline" size="sm" onClick={() => {
+                const variants = (f.variants as any[]) ?? [];
+                set("variants", [...variants, { type: "color", label: "Couleur", options: [{ label: "Noir", value: "noir", hex: "#000000" }] }]);
+              }}>+ Add Variant</Button>
+            </div>
+            {((f.variants as any[]) ?? []).map((v, vi) => (
+              <div key={vi} className="rounded-lg border border-[var(--line)] p-3 space-y-2">
+                <div className="flex gap-2 items-center">
+                  <select
+                    className="h-8 rounded border border-[var(--line)] bg-[var(--bg)] px-2 text-xs flex-1"
+                    value={v.type}
+                    onChange={(e) => {
+                      const variants = [...(f.variants as any[])];
+                      variants[vi] = { ...variants[vi], type: e.target.value };
+                      set("variants", variants);
+                    }}
+                  >
+                    {["color","ram","storage","processor","screen","os","gpu","finish","size","capacity"].map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                  <Input placeholder="Label (e.g. Mémoire RAM)" value={v.label} onChange={(e) => {
+                    const variants = [...(f.variants as any[])];
+                    variants[vi] = { ...variants[vi], label: e.target.value };
+                    set("variants", variants);
+                  }} className="flex-1" />
+                  <Button type="button" variant="ghost" size="icon" onClick={() => {
+                    set("variants", (f.variants as any[]).filter((_, i) => i !== vi));
+                  }} aria-label="Delete variant"><Trash2 className="h-4 w-4" /></Button>
                 </div>
-              ))}
-            </section>
-          ))}
+                <div className="pl-4 space-y-1">
+                  {v.options.map((opt: any, oi: number) => (
+                    <div key={oi} className="flex gap-2 items-center text-xs">
+                      {v.type === "color" && (
+                        <input type="color" value={opt.hex || "#000000"} onChange={(e) => {
+                          const variants = [...(f.variants as any[])];
+                          const opts = [...variants[vi].options];
+                          opts[oi] = { ...opts[oi], hex: e.target.value };
+                          variants[vi] = { ...variants[vi], options: opts };
+                          set("variants", variants);
+                        }} className="h-6 w-6 cursor-pointer border-0" />
+                      )}
+                      <Input placeholder="Label" value={opt.label} onChange={(e) => {
+                        const variants = [...(f.variants as any[])];
+                        const opts = [...variants[vi].options];
+                        opts[oi] = { ...opts[oi], label: e.target.value };
+                        variants[vi] = { ...variants[vi], options: opts };
+                        set("variants", variants);
+                      }} className="flex-1" />
+                      <Input placeholder="Value" value={opt.value} onChange={(e) => {
+                        const variants = [...(f.variants as any[])];
+                        const opts = [...variants[vi].options];
+                        opts[oi] = { ...opts[oi], value: e.target.value };
+                        variants[vi] = { ...variants[vi], options: opts };
+                        set("variants", variants);
+                      }} className="w-20" />
+                      <Input type="number" placeholder="Price diff" value={opt.priceDiff ?? ""} onChange={(e) => {
+                        const variants = [...(f.variants as any[])];
+                        const opts = [...variants[vi].options];
+                        opts[oi] = { ...opts[oi], priceDiff: e.target.value ? Number(e.target.value) : undefined };
+                        variants[vi] = { ...variants[vi], options: opts };
+                        set("variants", variants);
+                      }} className="w-20" />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => {
+                        const variants = [...(f.variants as any[])];
+                        variants[vi] = { ...variants[vi], options: variants[vi].options.filter((_: any, i: number) => i !== oi) };
+                        set("variants", variants);
+                      }} aria-label="Delete option"><Trash2 className="h-3 w-3" /></Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="ghost" size="sm" onClick={() => {
+                    const variants = [...(f.variants as any[])];
+                    const opts = [...variants[vi].options, { label: "", value: "" }];
+                    variants[vi] = { ...variants[vi], options: opts };
+                    set("variants", variants);
+                  }}>+ Option</Button>
+                </div>
+              </div>
+            ))}
+          </section>
 
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {(["featured", "isNew", "active"] as const).map((flag) => (
               <label key={flag} className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={bool(flag)} onChange={(e) => set(flag, e.target.checked)} />
-                {flag === "featured" ? "Mis en avant" : flag === "isNew" ? "Nouveauté" : "Actif"}
+                {flag === "featured" ? "Featured" : flag === "isNew" ? "New" : "Active"}
               </label>
             ))}
           </section>
@@ -344,16 +525,18 @@ function ProductForm({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={onClose}>Annuler</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
           <Button type="button" onClick={save} disabled={busy}>
             {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-            Enregistrer
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+import { PageHeader } from "@/components/admin/PageHeader";
 
 export default function Products() {
   const { formatPrice } = useI18n();
@@ -379,7 +562,7 @@ export default function Products() {
     if (!q.trim()) return data;
     const ql = q.toLowerCase();
     return data.filter(
-      (p) => p.nameFr.toLowerCase().includes(ql) || p.nameAr.includes(q) || p.sku.toLowerCase().includes(ql) || p.slug.includes(ql),
+      (p) => p.nameFr.toLowerCase().includes(ql) || p.sku.toLowerCase().includes(ql) || p.slug.includes(ql),
     );
   }, [data, q]);
 
@@ -394,17 +577,14 @@ export default function Products() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-hud text-2xl font-bold">Produits</h1>
-          <p className="text-sm text-[var(--text-2)]">{filtered.length} références</p>
-        </div>
+        <PageHeader title="Products" subtitle={`${filtered.length} references`} />
         <div className="flex gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-2)]" />
-            <Input className="w-56 pl-9" placeholder="Rechercher…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <Input className="w-56 pl-9" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
           <Button onClick={() => setCreating(true)}>
-            <Plus className="h-4 w-4" /> Nouveau
+            <Plus className="h-4 w-4" /> New
           </Button>
         </div>
       </div>
@@ -413,10 +593,10 @@ export default function Products() {
         <table className="w-full text-sm">
           <thead className="border-b border-[var(--line)] bg-[var(--void-2)] text-left text-xs uppercase tracking-wider text-[var(--text-2)]">
             <tr>
-              <th className="px-4 py-3">Produit</th>
-              <th className="px-4 py-3">Prix</th>
+              <th className="px-4 py-3">Product</th>
+              <th className="px-4 py-3">Price</th>
               <th className="px-4 py-3">Stock</th>
-              <th className="px-4 py-3">Statut</th>
+              <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -446,15 +626,15 @@ export default function Products() {
                       p.active ? "bg-emerald-500/15 text-emerald-400" : "bg-[var(--alert)]/15 text-[var(--alert)]",
                     )}
                   >
-                    {p.active ? "Actif" : "Inactif"}
+                    {p.active ? "Active" : "Inactive"}
                   </button>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => setEditing(p)} aria-label="Modifier">
+                    <Button variant="ghost" size="icon" onClick={() => setEditing(p)} aria-label="Edit">
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => remove.mutate({ id: p.id })} aria-label="Supprimer">
+                    <Button variant="ghost" size="icon" onClick={() => remove.mutate({ id: p.id })} aria-label="Delete">
                       <Trash2 className="h-4 w-4 text-[var(--alert)]" />
                     </Button>
                   </div>
@@ -463,7 +643,7 @@ export default function Products() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-[var(--text-2)]">Aucun produit.</td>
+                <td colSpan={5} className="px-4 py-10 text-center text-[var(--text-2)]">No products.</td>
               </tr>
             )}
           </tbody>

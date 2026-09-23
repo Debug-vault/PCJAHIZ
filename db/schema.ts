@@ -15,7 +15,7 @@ export const uid = () => sql`gen_random_uuid()`;
 
 // ===== Enums =====
 export const roleEnum = pgEnum("role", ["customer", "admin"]);
-export const paymentMethodEnum = pgEnum("payment_method", ["cod", "cmi"]);
+export const paymentMethodEnum = pgEnum("payment_method", ["cod"]);
 export const orderStatusEnum = pgEnum("order_status", [
   "preparing",
   "in_transit",
@@ -60,13 +60,9 @@ export const categories = pgTable(
     id: text("id").primaryKey().default(uid()),
     slug: text("slug").notNull().unique(),
     nameFr: text("nameFr").notNull(),
-    nameAr: text("nameAr").notNull(),
     description: text("description"),
-    descriptionAr: text("descriptionAr"),
     seoTitleFr: text("seoTitleFr"),
-    seoTitleAr: text("seoTitleAr"),
     seoDescriptionFr: text("seoDescriptionFr"),
-    seoDescriptionAr: text("seoDescriptionAr"),
     parentSlug: text("parentSlug"),
     image: text("image"),
     deck: integer("deck").notNull().default(1),
@@ -88,11 +84,8 @@ export const brands = pgTable("jhz_brands", {
   name: text("name").notNull(),
   logo: text("logo"),
   description: text("description"),
-  descriptionAr: text("descriptionAr"),
   seoTitle: text("seoTitle"),
-  seoTitleAr: text("seoTitleAr"),
   seoDescription: text("seoDescription"),
-  seoDescriptionAr: text("seoDescriptionAr"),
   sortOrder: integer("sortOrder").notNull().default(0),
   showInMarquee: boolean("showInMarquee").notNull().default(true),
   active: boolean("active").notNull().default(true),
@@ -109,19 +102,11 @@ export const products = pgTable(
     slug: text("slug").notNull().unique(),
     sku: text("sku").notNull().unique(),
     nameFr: text("nameFr").notNull(),
-    nameAr: text("nameAr").notNull(),
     summaryFr: text("summaryFr"),
-    summaryAr: text("summaryAr"),
     descriptionFr: text("descriptionFr"),
-    descriptionAr: text("descriptionAr"),
     seoTitleFr: text("seoTitleFr"),
-    seoTitleAr: text("seoTitleAr"),
     seoDescriptionFr: text("seoDescriptionFr"),
-    seoDescriptionAr: text("seoDescriptionAr"),
     faqFr: jsonb("faqFr"),
-    faqAr: jsonb("faqAr"),
-    aiGeneratedAt: timestamp("aiGeneratedAt"),
-    aiPrompt: text("aiPrompt"),
     brandSlug: text("brandSlug"),
     categorySlug: text("categorySlug"),
     price: integer("price").notNull(),
@@ -132,6 +117,8 @@ export const products = pgTable(
     img: text("img"),
     images: jsonb("images"),
     specs: jsonb("specs"),
+    sectionsFr: jsonb("sectionsFr"),
+    variants: jsonb("variants"),
     stock: integer("stock").notNull().default(0),
     lowStockThreshold: integer("lowStockThreshold").notNull().default(3),
     featured: boolean("featured").notNull().default(false),
@@ -219,7 +206,6 @@ export const orderItems = pgTable(
     productId: text("productId"),
     sku: text("sku"),
     nameFr: text("nameFr").notNull(),
-    nameAr: text("nameAr").notNull(),
     unitPrice: integer("unitPrice").notNull(),
     quantity: integer("quantity").notNull(),
     total: integer("total").notNull(),
@@ -308,3 +294,132 @@ export const settings = pgTable("jhz_settings", {
 });
 
 export type Setting = typeof settings.$inferSelect;
+
+// ===== Campaigns (hero slides + featured campaign cards) =====
+export const campaignTypeEnum = pgEnum("campaign_type", ["hero", "campaign"]);
+
+export const campaigns = pgTable("jhz_campaigns", {
+  id: text("id").primaryKey().default(uid()),
+  slug: text("slug").notNull().unique(),
+  type: campaignTypeEnum("type").notNull().default("hero"),
+  layout: text("layout").notNull().default("split"),
+  eyebrow: text("eyebrow"),
+  heading: text("heading"),
+  description: text("description"),
+  ctaLabel: text("ctaLabel"),
+  ctaUrl: text("ctaUrl"),
+  image: text("image"),
+  bgColor: text("bgColor"),
+  badge: text("badge"),
+  discountRibbon: text("discountRibbon"),
+  oldPrice: integer("oldPrice"),
+  price: integer("price"),
+  brandSlug: text("brandSlug"),
+  brandLabel: text("brandLabel"),
+  brandBadge: text("brandBadge"),
+  products: jsonb("products"),
+  bgConfig: jsonb("bgConfig"),
+  styles: jsonb("styles"),
+  sortOrder: integer("sortOrder").notNull().default(0),
+  endsAt: timestamp("endsAt"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Campaign = typeof campaigns.$inferSelect;
+
+// ===== Store locations =====
+export const storeLocations = pgTable("jhz_store_locations", {
+  id: text("id").primaryKey().default(uid()),
+  name: text("name").notNull().unique(),
+  city: text("city").notNull(),
+  address: text("address").notNull(),
+  phone: text("phone"),
+  hours: jsonb("hours"),
+  image: text("image"),
+  mapsUrl: text("mapsUrl"),
+  isPickupPoint: boolean("isPickupPoint").notNull().default(false),
+  sortOrder: integer("sortOrder").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type StoreLocation = typeof storeLocations.$inferSelect;
+
+// ===== Newsletter subscribers =====
+export const newsletterSubscribers = pgTable("jhz_newsletter_subscribers", {
+  id: text("id").primaryKey().default(uid()),
+  email: text("email").notNull().unique(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
+
+// ===== Loyalty members =====
+export const loyaltyMembers = pgTable("jhz_loyalty_members", {
+  id: text("id").primaryKey().default(uid()),
+  userId: text("userId").notNull(),
+  points: integer("points").notNull().default(0),
+  tier: text("tier").notNull().default("classic"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type LoyaltyMember = typeof loyaltyMembers.$inferSelect;
+
+// ===== Quote requests (devis) =====
+export const quoteStatusEnum = pgEnum("quote_status", ["new", "contacted", "done"]);
+
+export const quoteRequests = pgTable("jhz_quote_requests", {
+  id: text("id").primaryKey().default(uid()),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  company: text("company"),
+  details: text("details"),
+  status: quoteStatusEnum("status").notNull().default("new"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type QuoteRequest = typeof quoteRequests.$inferSelect;
+
+// ===== Blog =====
+export const blogStatusEnum = pgEnum("blog_status", ["draft", "published", "archived"]);
+
+export const blogCategories = pgTable("jhz_blog_categories", {
+  id: text("id").primaryKey().default(uid()),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BlogCategory = typeof blogCategories.$inferSelect;
+
+export const blogPosts = pgTable(
+  "jhz_blog_posts",
+  {
+    id: text("id").primaryKey().default(uid()),
+    slug: text("slug").notNull().unique(),
+    title: text("title").notNull(),
+    excerpt: text("excerpt"),
+    body: text("body"),
+    coverImage: text("coverImage"),
+    categorySlug: text("categorySlug"),
+    tags: jsonb("tags"),
+    status: blogStatusEnum("status").notNull().default("draft"),
+    seoTitle: text("seoTitle"),
+    seoDescription: text("seoDescription"),
+    authorName: text("authorName").default("PC Jahiz"),
+    publishedAt: timestamp("publishedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  (t) => ({
+    categoryIdx: index("jhz_blog_cat_idx").on(t.categorySlug),
+    statusIdx: index("jhz_blog_status_idx").on(t.status),
+  }),
+);
+
+export type BlogPost = typeof blogPosts.$inferSelect;

@@ -10,6 +10,7 @@ export default defineConfig({
     devServer({ entry: "api/boot.ts", exclude: [/^\/(?!api\/).*$/] }),
     react()],
   server: {
+    host: true,
     port: 3000,
   },
   resolve: {
@@ -24,5 +25,15 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/three") || id.includes("node_modules/@react-three")) return "three";
+          if (id.includes("node_modules/recharts")) return "charts";
+          if (id.includes("node_modules/vaul") || id.includes("node_modules/@radix-ui") || id.includes("node_modules/sonner")) return "ui";
+        },
+      },
+    },
   },
 });

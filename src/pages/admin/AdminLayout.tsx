@@ -9,26 +9,67 @@ import {
   TicketPercent,
   Truck,
   Star,
-  Settings2,
+  Megaphone,
+  LayoutTemplate,
+  MapPinned,
+  FileText,
+  Mail,
   LogOut,
   Loader2,
+  Settings2,
+  BookOpen,
+  Upload,
+  type LucideIcon,
 } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import { useStoreSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/lib/cart";
 
-const navItems = [
-  { to: "/admin", label: "Tableau de bord", icon: LayoutDashboard, end: true },
-  { to: "/admin/products", label: "Produits", icon: Box },
-  { to: "/admin/orders", label: "Commandes", icon: ShoppingBag },
-  { to: "/admin/customers", label: "Clients", icon: Users },
-  { to: "/admin/categories", label: "Catégories", icon: FolderTree },
-  { to: "/admin/brands", label: "Marques", icon: BadgeCheck },
-  { to: "/admin/promos", label: "Codes promo", icon: TicketPercent },
-  { to: "/admin/shipping", label: "Livraison", icon: Truck },
-  { to: "/admin/reviews", label: "Avis", icon: Star },
-  { to: "/admin/settings", label: "Réglages", icon: Settings2 },
+const navGroups: { label: string; items: { to: string; label: string; icon: LucideIcon; end?: boolean }[] }[] = [
+  {
+    label: "Overview",
+    items: [{ to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true }],
+  },
+  {
+    label: "Catalog",
+    items: [
+      { to: "/admin/products", label: "Products", icon: Box },
+      { to: "/admin/categories", label: "Categories", icon: FolderTree },
+      { to: "/admin/brands", label: "Brands", icon: BadgeCheck },
+      { to: "/admin/bulk-import", label: "Bulk Import", icon: Upload },
+    ],
+  },
+  {
+    label: "Sales & Customers",
+    items: [
+      { to: "/admin/orders", label: "Orders", icon: ShoppingBag },
+      { to: "/admin/customers", label: "Customers", icon: Users },
+      { to: "/admin/quotes", label: "Quote Requests", icon: FileText },
+    ],
+  },
+  {
+    label: "Marketing",
+    items: [
+      { to: "/admin/promos", label: "Promo Codes", icon: TicketPercent },
+      { to: "/admin/campaigns", label: "Campaigns", icon: Megaphone },
+      { to: "/admin/hero", label: "Hero Builder", icon: LayoutTemplate },
+      { to: "/admin/reviews", label: "Reviews", icon: Star },
+      { to: "/admin/blog", label: "Blog", icon: BookOpen },
+      { to: "/admin/newsletter", label: "Newsletter", icon: Mail },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { to: "/admin/shipping", label: "Shipping", icon: Truck },
+      { to: "/admin/store-locations", label: "Store Locations", icon: MapPinned },
+    ],
+  },
+  {
+    label: "System",
+      items: [{ to: "/admin/settings", label: "Settings", icon: Settings2 }],
+  },
 ];
 
 export default function AdminLayout() {
@@ -54,9 +95,9 @@ export default function AdminLayout() {
   if (me.role !== "admin") {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-5 px-4 text-center">
-        <h1 className="font-hud text-2xl font-bold text-[var(--text-1)]">Accès réservé</h1>
-        <p className="text-sm text-[var(--text-2)]">Votre compte n'a pas les droits administrateur.</p>
-        <Link to="/" className="btn-dock">Retour à la boutique</Link>
+        <h1 className="font-hud text-2xl font-bold text-[var(--text-1)]">Access Restricted</h1>
+        <p className="text-sm text-[var(--text-2)]">Your account does not have admin privileges.</p>
+        <Link to="/" className="btn-dock">Back to Store</Link>
       </div>
     );
   }
@@ -86,24 +127,29 @@ export default function AdminLayout() {
             <span className="font-hud text-sm font-bold tracking-wide">{settings.storeName}</span>
           </Link>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Admin">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
-                  isActive
-                    ? "bg-[var(--gold-dim)] font-semibold text-[var(--gold)]"
-                    : "text-[var(--text-2)] hover:bg-white/5 hover:text-[var(--text-1)]",
-                )
-              }
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </NavLink>
+        <nav className="flex-1 space-y-4 overflow-y-auto p-3" aria-label="Admin">
+          {navGroups.map((group) => (
+            <div key={group.label} className="space-y-1">
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-2)]/70">{group.label}</p>
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
+                      isActive
+                        ? "bg-[var(--gold-dim)] font-semibold text-[var(--gold)]"
+                        : "text-[var(--text-2)] hover:bg-white/5 hover:text-[var(--text-1)]",
+                    )
+                  }
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="border-t border-[var(--line)] p-3">
@@ -112,7 +158,7 @@ export default function AdminLayout() {
             className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-[var(--alert)] hover:bg-white/5"
           >
             <LogOut className="h-4 w-4" />
-            Se déconnecter
+            Sign Out
           </button>
         </div>
       </aside>

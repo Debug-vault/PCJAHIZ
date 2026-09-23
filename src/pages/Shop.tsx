@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
-import { Search, X, SlidersHorizontal } from "lucide-react";
+import { Search, X, SlidersHorizontal, ChevronRight } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { trpc } from "@/providers/trpc";
 import { ProductCard } from "@/components/product-card";
@@ -9,8 +9,9 @@ import { cn } from "@/lib/utils";
 const SORTS = ["popular", "newest", "price-asc", "price-desc"] as const;
 
 export default function Shop() {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const [params, setParams] = useSearchParams();
+  const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
 
   const q = params.get("q") ?? "";
   const category = params.get("category") ?? "";
@@ -35,15 +36,30 @@ export default function Shop() {
 
   const hasFilters = q || category || brand || minPrice != null || maxPrice != null;
 
+  const parentCategories = useMemo(() => (categories ?? []).filter((c) => !c.parentSlug), [categories]);
+  const subCategories = useMemo(() => (categories ?? []).filter((c) => c.parentSlug), [categories]);
+  const subsFor = (parentSlug: string) => subCategories.filter((c) => c.parentSlug === parentSlug);
+
+  const toggleExpand = (slug: string) => {
+    setExpandedCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  };
+
+  const activeCategoryObj = useMemo(() => (categories ?? []).find((c) => c.slug === category), [categories, category]);
+
   const activeCategory = useMemo(() => categories?.find((c) => c.slug === category), [categories, category]);
   const activeBrand = useMemo(() => brands?.find((b) => b.slug === brand), [brands, brand]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[var(--store-max-width)] px-4 py-10 sm:px-6">
       <header className="mb-8">
         <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--gold)]">{t("nav.boutique")}</p>
         <h1 className="mt-2 font-hud text-3xl font-bold text-[var(--text-1)]">
-          {activeCategory ? (locale === "ar" ? activeCategory.nameAr : activeCategory.nameFr) : activeBrand ? activeBrand.name : t("nav.products")}
+          {activeCategory ? activeCategory.nameFr : activeBrand ? activeBrand.name : t("nav.products")}
         </h1>
         <p className="mt-2 font-mono text-sm text-[var(--text-2)]">
           {isLoading ? t("common.loading") : `${products?.length ?? 0} ${t("product.resultsCount")}`}
@@ -77,37 +93,84 @@ export default function Shop() {
             </div>
           </div>
 
+          {/* Categories */}
           <div>
             <h3 className="mb-2 flex items-center gap-2 font-hud text-xs font-bold uppercase tracking-widest text-[var(--text-2)]">
               <SlidersHorizontal className="h-3.5 w-3.5" /> {t("common.filter")}
             </h3>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-0.5">
               <button
                 type="button"
                 onClick={() => setParam("category", "")}
                 className={cn(
-                  "rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                  !category ? "bg-[var(--gold-dim)] text-[var(--gold)]" : "text-[var(--text-2)] hover:bg-white/5 hover:text-[var(--text-1)]",
+                  "rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
+                  !category ? "bg-[var(--gold)] text-[#1b1b1f]" : "text-[var(--text-2)] hover:bg-white/5 hover:text-[var(--text-1)]",
                 )}
               >
                 {t("common.all")}
               </button>
-              {(categories ?? []).map((c) => (
-                <button
-                  key={c.slug}
-                  type="button"
-                  onClick={() => setParam("category", c.slug)}
-                  className={cn(
-                    "rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                    category === c.slug ? "bg-[var(--gold-dim)] text-[var(--gold)]" : "text-[var(--text-2)] hover:bg-white/5 hover:text-[var(--text-1)]",
-                  )}
-                >
-                  {locale === "ar" ? c.nameAr : c.nameFr}
-                </button>
-              ))}
+              {parentCategories.map((c) => {
+                const children = subsFor(c.slug);
+                const isExpanded = expandedCats.has(c.slug);
+                const isActive = category === c.slug;
+                const hasActiveChild = children.some((ch) => ch.slug === category);
+                return (
+                  <div key={c.slug}>
+                    <div className={cn(
+                      "flex items-center rounded-lg transition-colors",
+                      (isActive || hasActiveChild) && "bg-[var(--gold)]/10",
+                    )}>
+                      <button
+                        type="button"
+                        onClick={() => setParam("category", c.slug)}
+                        className={cn(
+                          "flex-1 px-3 py-2 text-left text-sm font-medium transition-colors",
+                          isActive ? "text-[var(--gold)]" : "text-[var(--text-1)] hover:text-[var(--gold)]",
+                        )}
+                      >
+                        {c.nameFr}
+                        {typeof c.productCount === "number" ? (
+                          <span className="ml-1.5 text-[10px] text-[var(--text-2)]">({c.productCount})</span>
+                        ) : null}
+                      </button>
+                      {children.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleExpand(c.slug)}
+                          className="mr-1 flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-2)] hover:bg-white/5 hover:text-[var(--text-1)]"
+                          aria-label={`Expand ${c.nameFr}`}
+                        >
+                          <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isExpanded && "rotate-90")} />
+                        </button>
+                      ) : null}
+                    </div>
+                    {isExpanded && children.length > 0 ? (
+                      <div className="ml-3 border-l border-[var(--line)] pl-2">
+                        {children.map((ch) => (
+                          <button
+                            key={ch.slug}
+                            type="button"
+                            onClick={() => setParam("category", ch.slug)}
+                            className={cn(
+                              "w-full rounded-lg px-3 py-1.5 text-left text-sm transition-colors",
+                              category === ch.slug ? "bg-[var(--gold)] text-[#1b1b1f] font-medium" : "text-[var(--text-2)] hover:bg-white/5 hover:text-[var(--text-1)]",
+                            )}
+                          >
+                            {ch.nameFr}
+                            {typeof ch.productCount === "number" ? (
+                              <span className={cn("ml-1.5 text-[10px]", category === ch.slug ? "text-[#1b1b1f]/60" : "text-[var(--text-2)]")}>({ch.productCount})</span>
+                            ) : null}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
+          {/* Brands */}
           <div>
             <h3 className="mb-2 font-hud text-xs font-bold uppercase tracking-widest text-[var(--text-2)]">{t("product.brand")}</h3>
             <select
@@ -124,6 +187,7 @@ export default function Shop() {
             </select>
           </div>
 
+          {/* Price */}
           <div>
             <h3 className="mb-2 font-hud text-xs font-bold uppercase tracking-widest text-[var(--text-2)]">Prix</h3>
             <div className="flex items-center gap-2">

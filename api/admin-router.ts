@@ -12,6 +12,12 @@ import {
   shippingZones,
   promoCodes,
   settings,
+  campaigns,
+  storeLocations,
+  quoteRequests,
+  newsletterSubscribers,
+  blogPosts,
+  blogCategories,
 } from "@db/schema";
 import { eq, and, desc, asc, count, ne, sql, type SQL } from "drizzle-orm";
 
@@ -30,15 +36,10 @@ const productInput = z.object({
   slug: z.string().min(1),
   sku: z.string().min(1),
   nameFr: z.string().min(1),
-  nameAr: z.string().min(1),
   summaryFr: z.string().optional().nullable(),
-  summaryAr: z.string().optional().nullable(),
   descriptionFr: z.string().optional().nullable(),
-  descriptionAr: z.string().optional().nullable(),
   seoTitleFr: z.string().optional().nullable(),
-  seoTitleAr: z.string().optional().nullable(),
   seoDescriptionFr: z.string().optional().nullable(),
-  seoDescriptionAr: z.string().optional().nullable(),
   brandSlug: z.string().optional().nullable(),
   categorySlug: z.string().optional().nullable(),
   price: z.number().int().min(0),
@@ -49,7 +50,42 @@ const productInput = z.object({
   images: z.array(z.string()).optional().nullable(),
   specs: z.array(z.object({ k: z.string(), v: z.string() })).optional().nullable(),
   faqFr: z.array(z.object({ q: z.string(), a: z.string() })).optional().nullable(),
-  faqAr: z.array(z.object({ q: z.string(), a: z.string() })).optional().nullable(),
+  sectionsFr: z.array(z.object({
+    id: z.string(),
+    title: z.string(),
+    icon: z.string(),
+    text: z.string(),
+    visual: z.object({
+      type: z.enum(["gauges", "bars", "icons", "specs-grid"]),
+      items: z.array(z.object({
+        label: z.string(),
+        value: z.preprocess((v) => {
+          if (typeof v === "number") return v;
+          const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ""));
+          return isNaN(n) ? 0 : n;
+        }, z.number()),
+        max: z.preprocess((v) => {
+          if (v == null || v === undefined) return undefined;
+          if (typeof v === "number") return v;
+          const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ""));
+          return isNaN(n) ? undefined : n;
+        }, z.number().optional()),
+      })),
+    }).nullable(),
+  })).optional().nullable(),
+  variants: z.array(z.object({
+    type: z.string(),
+    label: z.string(),
+    options: z.array(z.object({
+      label: z.string(),
+      value: z.string(),
+      hex: z.string().optional(),
+      image: z.string().optional(),
+      priceDiff: z.coerce.number().optional(),
+      stock: z.coerce.number().optional(),
+      sku: z.string().optional(),
+    })),
+  })).optional().nullable(),
   stock: z.number().int().min(0),
   lowStockThreshold: z.number().int().min(0).optional().nullable(),
   featured: z.boolean().optional(),
@@ -63,13 +99,9 @@ const productInput = z.object({
 const categoryInput = z.object({
   slug: z.string().min(1),
   nameFr: z.string().min(1),
-  nameAr: z.string().min(1),
   description: z.string().optional().nullable(),
-  descriptionAr: z.string().optional().nullable(),
   seoTitleFr: z.string().optional().nullable(),
-  seoTitleAr: z.string().optional().nullable(),
   seoDescriptionFr: z.string().optional().nullable(),
-  seoDescriptionAr: z.string().optional().nullable(),
   parentSlug: z.string().optional().nullable(),
   image: z.string().optional().nullable(),
   deck: z.number().int().optional(),
@@ -83,11 +115,8 @@ const brandInput = z.object({
   name: z.string().min(1),
   logo: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
-  descriptionAr: z.string().optional().nullable(),
   seoTitle: z.string().optional().nullable(),
-  seoTitleAr: z.string().optional().nullable(),
   seoDescription: z.string().optional().nullable(),
-  seoDescriptionAr: z.string().optional().nullable(),
   sortOrder: z.number().int().optional(),
   showInMarquee: z.boolean().optional(),
   active: z.boolean().optional(),
@@ -183,7 +212,7 @@ export const adminRouter = createRouter({
         if (input.active != null) conds.push(eq(products.active, input.active));
         if (input.q) {
           const q = `%${input.q}%`;
-          conds.push(sql`(${products.nameFr} ilike ${q} or ${products.nameAr} ilike ${q} or ${products.sku} ilike ${q})`);
+          conds.push(sql`(${products.nameFr} ilike ${q} or ${products.sku} ilike ${q})`);
         }
         const rows = await getDb()
           .select()
@@ -210,11 +239,43 @@ export const adminRouter = createRouter({
           images: input.images ?? (input.img ? [input.img] : []),
           specs: input.specs ?? [],
           faqFr: input.faqFr ?? [],
-          faqAr: input.faqAr ?? [],
+          sectionsFr: input.sectionsFr ?? null,
+          variants: input.variants ?? null,
         })
         .returning();
       return row;
     }),
+
+    bulkCreate: adminQuery
+      .input(z.array(productInput).min(1).max(50))
+      .mutation(async ({ input }) => {
+        const db = getDb();
+        const results: { ok: boolean; slug: string; error?: string }[] = [];
+        for (const item of input) {
+          try {
+            const exists = await db.select().from(products).where(eq(products.slug, item.slug)).limit(1);
+            if (exists.length > 0) {
+              results.push({ ok: false, slug: item.slug, error: "Slug déjà utilisé" });
+              continue;
+            }
+            await db.insert(products).values({
+              ...cleanNulls(item),
+              lowStockThreshold: item.lowStockThreshold ?? 3,
+              warrantyMonths: item.warrantyMonths ?? 12,
+              popularity: item.popularity ?? 0,
+              images: item.images ?? (item.img ? [item.img] : []),
+              specs: item.specs ?? [],
+              faqFr: item.faqFr ?? [],
+              sectionsFr: item.sectionsFr ?? null,
+              variants: item.variants ?? null,
+            });
+            results.push({ ok: true, slug: item.slug });
+          } catch (err) {
+            results.push({ ok: false, slug: item.slug, error: err instanceof Error ? err.message : "Erreur" });
+          }
+        }
+        return results;
+      }),
 
     update: adminQuery
       .input(z.object({ id: z.string(), data: productInput.partial() }))
@@ -473,6 +534,241 @@ export const adminRouter = createRouter({
       }),
     delete: adminQuery.input(z.object({ key: z.string() })).mutation(async ({ input }) => {
       await getDb().delete(settings).where(eq(settings.key, input.key));
+      return { ok: true };
+    }),
+  },
+
+  campaigns: {
+    list: adminQuery.query(() => getDb().select().from(campaigns).orderBy(asc(campaigns.sortOrder))),
+    create: adminQuery
+      .input(
+        z.object({
+          slug: z.string().min(1),
+          type: z.enum(["hero", "campaign"]),
+            layout: z.enum(["split", "overlay", "product-grid"]).optional(),
+          eyebrow: z.string().optional().nullable(),
+          heading: z.string().optional().nullable(),
+          description: z.string().optional().nullable(),
+          ctaLabel: z.string().optional().nullable(),
+          ctaUrl: z.string().optional().nullable(),
+          image: z.string().optional().nullable(),
+          bgColor: z.string().optional().nullable(),
+          badge: z.string().optional().nullable(),
+          discountRibbon: z.string().optional().nullable(),
+          oldPrice: z.number().optional().nullable(),
+          price: z.number().optional().nullable(),
+          brandSlug: z.string().optional().nullable(),
+          brandLabel: z.string().optional().nullable(),
+          brandBadge: z.string().optional().nullable(),
+          products: z.any().optional().nullable(),
+          bgConfig: z.any().optional().nullable(),
+          styles: z.any().optional().nullable(),
+          sortOrder: z.number().int().default(0),
+          endsAt: z.string().optional().nullable(),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const [row] = await getDb()
+          .insert(campaigns)
+          .values({ ...input, endsAt: input.endsAt ? new Date(input.endsAt) : null })
+          .returning();
+        return row;
+      }),
+    update: adminQuery
+      .input(
+        z.object({
+          id: z.string(),
+          data: z.object({
+            slug: z.string().min(1).optional(),
+            type: z.enum(["hero", "campaign"]).optional(),
+          layout: z.enum(["split", "overlay", "product-grid"]).optional(),
+            eyebrow: z.string().optional().nullable(),
+            heading: z.string().optional().nullable(),
+            description: z.string().optional().nullable(),
+            ctaLabel: z.string().optional().nullable(),
+            ctaUrl: z.string().optional().nullable(),
+            image: z.string().optional().nullable(),
+            bgColor: z.string().optional().nullable(),
+            badge: z.string().optional().nullable(),
+            discountRibbon: z.string().optional().nullable(),
+            oldPrice: z.number().optional().nullable(),
+            price: z.number().optional().nullable(),
+            brandSlug: z.string().optional().nullable(),
+            brandLabel: z.string().optional().nullable(),
+            brandBadge: z.string().optional().nullable(),
+            products: z.any().optional().nullable(),
+            bgConfig: z.any().optional().nullable(),
+            styles: z.any().optional().nullable(),
+            sortOrder: z.number().int().optional(),
+            endsAt: z.string().optional().nullable(),
+            active: z.boolean().optional(),
+          }),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const { id, data } = input;
+        const set: Record<string, unknown> = { ...data };
+        if (data.endsAt !== undefined) set.endsAt = data.endsAt ? new Date(data.endsAt) : null;
+        const [row] = await getDb().update(campaigns).set(set).where(eq(campaigns.id, id)).returning();
+        return row;
+      }),
+    delete: adminQuery.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
+      await getDb().delete(campaigns).where(eq(campaigns.id, input.id));
+      return { ok: true };
+    }),
+  },
+
+  storeLocations: {
+    list: adminQuery.query(() => getDb().select().from(storeLocations).orderBy(asc(storeLocations.sortOrder))),
+    create: adminQuery
+      .input(
+        z.object({
+          name: z.string().min(1),
+          city: z.string().min(1),
+          address: z.string().min(1),
+          phone: z.string().optional().nullable(),
+          hours: z.object({ monSat: z.string(), sun: z.string() }).optional(),
+          image: z.string().optional().nullable(),
+          mapsUrl: z.string().optional().nullable(),
+          isPickupPoint: z.boolean().optional(),
+          sortOrder: z.number().int().default(0),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const [row] = await getDb().insert(storeLocations).values(input).returning();
+        return row;
+      }),
+    update: adminQuery
+      .input(
+        z.object({
+          id: z.string(),
+          data: z.object({
+            name: z.string().min(1).optional(),
+            city: z.string().min(1).optional(),
+            address: z.string().min(1).optional(),
+            phone: z.string().optional().nullable(),
+            hours: z.object({ monSat: z.string(), sun: z.string() }).optional(),
+            image: z.string().optional().nullable(),
+            mapsUrl: z.string().optional().nullable(),
+            isPickupPoint: z.boolean().optional(),
+            sortOrder: z.number().int().optional(),
+            active: z.boolean().optional(),
+          }),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const { id, data } = input;
+        const [row] = await getDb().update(storeLocations).set(data).where(eq(storeLocations.id, id)).returning();
+        return row;
+      }),
+    delete: adminQuery.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
+      await getDb().delete(storeLocations).where(eq(storeLocations.id, input.id));
+      return { ok: true };
+    }),
+  },
+
+  quoteRequests: {
+    list: adminQuery.query(() => getDb().select().from(quoteRequests).orderBy(desc(quoteRequests.createdAt))),
+    setStatus: adminQuery
+      .input(z.object({ id: z.string(), status: z.enum(["new", "contacted", "done"]) }))
+      .mutation(async ({ input }) => {
+        const [row] = await getDb()
+          .update(quoteRequests)
+          .set({ status: input.status })
+          .where(eq(quoteRequests.id, input.id))
+          .returning();
+        return row;
+      }),
+    delete: adminQuery.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
+      await getDb().delete(quoteRequests).where(eq(quoteRequests.id, input.id));
+      return { ok: true };
+    }),
+  },
+
+  newsletter: {
+    list: adminQuery.query(() =>
+      getDb().select().from(newsletterSubscribers).orderBy(desc(newsletterSubscribers.createdAt)),
+    ),
+  },
+
+  // ===== Blog Posts =====
+  blog: {
+    list: adminQuery.query(() =>
+      getDb().select().from(blogPosts).orderBy(desc(blogPosts.createdAt)),
+    ),
+    bySlug: adminQuery.input(z.object({ slug: z.string() })).query(async ({ input }) => {
+      const [post] = await getDb().select().from(blogPosts).where(eq(blogPosts.slug, input.slug));
+      return post ?? null;
+    }),
+    create: adminQuery
+      .input(
+        z.object({
+          slug: z.string().min(1),
+          title: z.string().min(1),
+          excerpt: z.string().optional().nullable(),
+          body: z.string().optional().nullable(),
+          coverImage: z.string().optional().nullable(),
+          categorySlug: z.string().optional().nullable(),
+          tags: z.array(z.string()).optional().nullable(),
+          status: z.enum(["draft", "published", "archived"]).optional(),
+          seoTitle: z.string().optional().nullable(),
+          seoDescription: z.string().optional().nullable(),
+          authorName: z.string().optional().nullable(),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const [row] = await getDb()
+          .insert(blogPosts)
+          .values({
+            ...input,
+            publishedAt: input.status === "published" ? new Date() : null,
+          })
+          .returning();
+        return row;
+      }),
+    update: adminQuery
+      .input(z.object({ id: z.string(), data: z.record(z.string(), z.unknown()) }))
+      .mutation(async ({ input }) => {
+        const setData: Record<string, unknown> = { ...input.data, updatedAt: new Date() };
+        if (input.data.status === "published" && !input.data.publishedAt) {
+          setData.publishedAt = new Date();
+        }
+        const [row] = await getDb()
+          .update(blogPosts)
+          .set(setData)
+          .where(eq(blogPosts.id, input.id))
+          .returning();
+        return row;
+      }),
+    delete: adminQuery.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
+      await getDb().delete(blogPosts).where(eq(blogPosts.id, input.id));
+      return { ok: true };
+    }),
+  },
+
+  // ===== Blog Categories =====
+  blogCategories: {
+    list: adminQuery.query(() =>
+      getDb().select().from(blogCategories).orderBy(asc(blogCategories.name)),
+    ),
+    create: adminQuery
+      .input(z.object({ slug: z.string().min(1), name: z.string().min(1), description: z.string().optional().nullable() }))
+      .mutation(async ({ input }) => {
+        const [row] = await getDb().insert(blogCategories).values(input).returning();
+        return row;
+      }),
+    update: adminQuery
+      .input(z.object({ id: z.string(), data: z.record(z.string(), z.unknown()) }))
+      .mutation(async ({ input }) => {
+        const [row] = await getDb()
+          .update(blogCategories)
+          .set(input.data)
+          .where(eq(blogCategories.id, input.id))
+          .returning();
+        return row;
+      }),
+    delete: adminQuery.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
+      await getDb().delete(blogCategories).where(eq(blogCategories.id, input.id));
       return { ok: true };
     }),
   },

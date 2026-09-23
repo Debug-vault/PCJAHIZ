@@ -7,7 +7,7 @@ export default function Brands() {
   const { data: brands, isLoading } = trpc.shop.brands.useQuery(undefined, { staleTime: 5 * 60 * 1000 });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[var(--store-max-width)] px-4 py-10 sm:px-6">
       <p className="font-mono text-xs uppercase tracking-[0.3em] text-[var(--gold)]">{t("brands.eyebrow")}</p>
       <h1 className="mt-2 font-hud text-3xl font-bold text-[var(--text-1)]">{t("brands.title")}</h1>
       <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--text-2)]">{t("brands.subtitle")}</p>

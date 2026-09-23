@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>iris.ma — Bottom Nav Replica</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #333;
+    background: #fafafa;
+  }
+
+  /* ---------- NAV BAR ---------- */
+  .nav {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: 50px;
+    background: #1a1a1a;
+    z-index: 1000;
+  }
+  .nav-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    height: 100%;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  /* LEFT — Tous nos produits */
+  .all-products-wrap { position: relative; flex-shrink: 0; }
+  .all-products {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f5a623;
+    color: #fff;
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .all-products svg { display: block; }
+  .all-products .chev { transition: transform .2s ease; }
+  .all-products.open .chev { transform: rotate(180deg); }
+
+  /* CENTER — nav links */
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    list-style: none;
+    flex: 1;
+    justify-content: center;
+  }
+  .nav-links > li { position: relative; }
+  .nav-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 8px 10px;
+    opacity: .9;
+    white-space: nowrap;
+    transition: opacity .15s ease;
+  }
+  .nav-links a:hover { opacity: 1; text-decoration: underline; }
+  .dot { color: #2f80ed; font-size: 18px; line-height: 1; }
+
+  /* placeholder dropdowns for center links */
+  .placeholder-dd {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 200px;
+    background: #fff;
+    color: #333;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    padding: 14px;
+    font-size: 13px;
+    display: none;
+  }
+  .placeholder-dd.open { display: block; }
+
+  /* RIGHT — utility */
+  .nav-right { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+  .nav-right a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 500;
+    opacity: .9;
+    white-space: nowrap;
+    transition: opacity .15s ease;
+  }
+  .nav-right a:hover { opacity: 1; }
+  .icon-btn {
+    background: none; border: none; color: #fff;
+    cursor: pointer; padding: 4px; opacity: .9; display: inline-flex;
+  }
+  .icon-btn:hover { opacity: 1; }
+
+  /* MEGA PANEL */
+  .mega {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 300px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    overflow: hidden;
+    display: none;
+  }
+  .mega.open { display: block; }
+  .mega a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 48px;
+    padding: 0 20px;
+    color: #333;
+    text-decoration: none;
+    font-size: 14px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .mega a:last-child { border-bottom: none; }
+  .mega a:hover { background: #f5f5f5; }
+  .mega .ic { width: 24px; text-align: center; font-size: 18px; }
+  .mega .label { flex: 1; }
+  .mega .chev-r { color: #bbb; }
+
+  /* HAMBURGER + DRAWER (mobile) */
+  .hamburger { display: none; background: none; border: none; color: #fff; cursor: pointer; padding: 6px; }
+  .drawer { display: none; }
+
+  @media (max-width: 768px) {
+    .nav-links, .nav-right .text-link { display: none; }
+    .hamburger { display: inline-flex; }
+    .mega { width: min(300px, calc(100vw - 24px)); }
+    .drawer.open {
+      display: block;
+      position: absolute;
+      top: 50px; left: 0; right: 0;
+      background: #fff;
+      color: #333;
+      padding: 8px 12px 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    }
+    .drawer .group-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .05em; color: #999; margin: 12px 4px 4px;
+    }
+    .drawer a {
+      display: block; padding: 11px 8px; color: #333;
+      text-decoration: none; border-bottom: 1px solid #eee; font-size: 14px;
+    }
+    .drawer a:active { background: #f5f5f5; }
+  }
+
+  /* ---------- HERO PLACEHOLDER ---------- */
+  .hero {
+    max-width: 1400px;
+    margin: 40px auto;
+    padding: 80px 20px;
+    background: linear-gradient(135deg, #f5a62322, #2f80ed22);
+    border-radius: 12px;
+    text-align: center;
+    min-height: 1200px;
+  }
+  .hero h1 { font-size: 32px; margin-bottom: 12px; }
+  .hero p { color: #666; }
+</style>
+</head>
+<body>
+
+  <header class="nav">
+    <div class="nav-inner">
+
+      <!-- LEFT -->
+      <div class="all-products-wrap">
+        <button class="all-products" id="allProductsBtn" aria-expanded="false" aria-controls="megaPanel">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+          <span>Tous nos produits</span>
+          <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+
+        <!-- MEGA PANEL -->
+        <nav class="mega" id="megaPanel" aria-label="Toutes les catégories">
+          <a href="#"><span class="ic">🖥️</span><span class="label">Ordinateur</span><span class="chev-r">›</span></a>
+          <a href="#"><span class="ic">🖨️</span><span class="label">Imprimante &amp; Scanner</span><span class="chev-r">›</span></a>
+          <a href="#"><span class="ic">🖱️</span><span class="label">Écran &amp; Périphériques</span><span class="chev-r">›</span></a>
+          <a href="#"><span class="ic">📺</span><span class="label">Image &amp; Son</span><span class="chev-r">›</span></a>
+          <a href="#"><span class="ic">📶</span><span class="label">Réseaux &amp; Wi-Fi</span><span class="chev-r">›</span></a>
+          <a href="#"><span class="ic">🛡️</span><span class="label">Onduleur &amp; Énergie</span><span class="chev-r">›</span></a>
+          <a href="#"><span class="ic">🎮</span><span class="label">Gaming</span><span class="chev-r">›</span></a>
+          <a href="#"><span class="ic">💾</span><span class="label">Stockage</span><span class="chev-r">›</span></a>
+          <a href="#"><span class="ic">📱</span><span class="label">Téléphonie</span><span class="chev-r">›</span></a>
+          <a href="#"><span class="ic">🏢</span><span class="label">Fourniture de bureau</span><span class="chev-r">›</span></a>
+          <a href="#"><span class="ic">📹</span><span class="label">Sécurité &amp; Vidéosurveillance</span><span class="chev-r">›</span></a>
+        </nav>
+      </div>
+
+      <!-- CENTER -->
+      <ul class="nav-links">
+        <li>
+          <a href="#" class="center-link">
+            <span class="dot">•</span> BONS PLANS
+          </a>
+          <div class="placeholder-dd">Placeholder dropdown</div>
+        </li>
+        <li>
+          <a href="#" class="center-link">Ordinateurs
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+          </a>
+          <div class="placeholder-dd">Placeholder dropdown</div>
+        </li>
+        <li>
+          <a href="#" class="center-link">Imprimantes
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+          </a>
+          <div class="placeholder-dd">Placeholder dropdown</div>
+        </li>
+        <li>
+          <a href="#" class="center-link">Périphériques
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+          </a>
+          <div class="placeholder-dd">Placeholder dropdown</div>
+        </li>
+        <li>
+          <a href="#" class="center-link">Image &amp; Son
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+          </a>
+          <div class="placeholder-dd">Placeholder dropdown</div>
+        </li>
+        <li>
+          <a href="#" class="center-link">Réseaux &amp; Wi-Fi
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+          </a>
+          <div class="placeholder-dd">Placeholder dropdown</div>
+        </li>
+        <li>
+          <a href="#" class="center-link">Gaming
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+          </a>
+          <div class="placeholder-dd">Placeholder dropdown</div>
+        </li>
+      </ul>
+
+      <!-- RIGHT -->
+      <div class="nav-right">
+        <a href="#" class="text-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M15 9h.01M9 13h.01M15 13h.01M9 17h.01M15 17h.01"/></svg>
+          Espace pro
+        </a>
+        <a href="#" class="text-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          Demander un devis
+        </a>
+        <button class="icon-btn" aria-label="Rechercher">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </button>
+        <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- MOBILE DRAWER -->
+    <div class="drawer" id="drawer">
+      <div class="group-title">Catégories</div>
+      <a href="#">Ordinateurs</a>
+      <a href="#">Imprimantes</a>
+      <a href="#">Périphériques</a>
+      <a href="#">Image &amp; Son</a>
+      <a href="#">Réseaux &amp; Wi-Fi</a>
+      <a href="#">Gaming</a>
+      <div class="group-title">Tous nos produits</div>
+      <a href="#">Ordinateur</a>
+      <a href="#">Imprimante &amp; Scanner</a>
+      <a href="#">Écran &amp; Périphériques</a>
+      <a href="#">Image &amp; Son</a>
+      <a href="#">Réseaux &amp; Wi-Fi</a>
+      <a href="#">Onduleur &amp; Énergie</a>
+      <a href="#">Gaming</a>
+      <a href="#">Stockage</a>
+      <a href="#">Téléphonie</a>
+      <a href="#">Fourniture de bureau</a>
+      <a href="#">Sécurité &amp; Vidéosurveillance</a>
+      <div class="group-title">Services</div>
+      <a href="#">Espace pro</a>
+      <a href="#">Demander un devis</a>
+    </div>
+  </header>
+
+  <!-- HERO PLACEHOLDER -->
+  <section class="hero">
+    <h1>iris.ma bottom-nav replica</h1>
+    <p>Scroll / hover the bar above. Click "Tous nos produits" to open the mega panel.</p>
+  </section>
+
+<script>
+  const allBtn = document.getElementById('allProductsBtn');
+  const mega = document.getElementById('megaPanel');
+  const hamburger = document.getElementById('hamburgerBtn');
+  const drawer = document.getElementById('drawer');
+
+  // Toggle mega panel
+  allBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = mega.classList.toggle('open');
+    allBtn.classList.toggle('open', open);
+    allBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  // Center link placeholder dropdowns
+  document.querySelectorAll('.center-link').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const dd = link.parentElement.querySelector('.placeholder-dd');
+      document.querySelectorAll('.placeholder-dd').forEach((d) => { if (d !== dd) d.classList.remove('open'); });
+      dd.classList.toggle('open');
+    });
+  });
+
+  // Hamburger drawer (mobile)
+  hamburger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    drawer.classList.toggle('open');
+  });
+
+  // Close everything on outside click
+  document.addEventListener('click', () => {
+    mega.classList.remove('open');
+    allBtn.classList.remove('open');
+    allBtn.setAttribute('aria-expanded', 'false');
+    drawer.classList.remove('open');
+    document.querySelectorAll('.placeholder-dd').forEach((d) => d.classList.remove('open'));
+  });
+
+  // Prevent panel clicks from closing
+  mega.addEventListener('click', (e) => e.stopPropagation());
+  drawer.addEventListener('click', (e) => e.stopPropagation());
+</script>
+</body>
+</html>
