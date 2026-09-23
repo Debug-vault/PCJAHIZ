@@ -1,11 +1,13 @@
 import { Hono } from "hono";
 import type { HttpBindings } from "@hono/node-server";
+import { serve } from "@hono/node-server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router";
 import { createContext } from "./context";
 import { env } from "./lib/env";
 import { bootstrapDb } from "./bootstrap";
 import { buildSitemap, buildRobots } from "./lib/sitemap";
+import { serveStaticFiles } from "./lib/vite";
 
 bootstrapDb();
 
@@ -31,8 +33,6 @@ app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 export default app;
 
 if (env.isProduction) {
-  const { serve } = await import("@hono/node-server");
-  const { serveStaticFiles } = await import("./lib/vite");
   serveStaticFiles(app);
 
   const port = parseInt(process.env.PORT || "3000");
