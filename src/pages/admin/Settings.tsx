@@ -5,12 +5,12 @@ import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEFAULT_HEADER, DEFAULT_SETTINGS, type HeaderConfig, type HeaderSliderDirection } from "@/lib/settings";
+import { DEFAULT_HEADER, DEFAULT_SETTINGS, type HeaderConfig, type HeaderSliderDirection, type SiteModeConfig } from "@/lib/settings";
 import { HeaderEditor } from "@/pages/admin/header-settings";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-type TopTab = "boutique" | "marque" | "entete" | "accueil" | "api";
+type TopTab = "boutique" | "marque" | "entete" | "accueil" | "site" | "api";
 type EnteteSection = "topBar" | "utilityBar" | "mainBar" | "slider" | "bottomNav" | "mobileDrawer";
 type AccueilSection = "hero" | "produits" | "marques" | "defilant" | "confiance" | "sections";
 
@@ -83,6 +83,7 @@ export default function Settings() {
   const [homeBrands, setHomeBrands] = useState(DEFAULT_SETTINGS.homeBrandsMarquee);
   const [sectionMaxWidths, setSectionMaxWidths] = useState(DEFAULT_SETTINGS.sectionMaxWidths);
   const [productWatermark, setProductWatermark] = useState(DEFAULT_SETTINGS.productWatermark);
+  const [siteMode, setSiteMode] = useState<SiteModeConfig>(DEFAULT_SETTINGS.siteMode);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -321,6 +322,36 @@ export default function Settings() {
         }
         continue;
       }
+      if (row.key === "siteMode") {
+        const rawSm = unwrap(row.value) as Record<string, unknown> | null;
+        const o = (rawSm && typeof rawSm === "object" && "value" in rawSm && rawSm.value !== null && typeof rawSm.value === "object" ? rawSm.value : rawSm) as Record<string, unknown> | null;
+        if (o && typeof o === "object") {
+          const d = DEFAULT_SETTINGS.siteMode;
+          setSiteMode({
+            enabled: typeof o.enabled === "boolean" ? o.enabled : d.enabled,
+            mode: o.mode === "maintenance" ? "maintenance" : o.mode === "coming-soon" ? "coming-soon" : d.mode,
+            title: typeof o.title === "string" ? o.title : d.title,
+            message: typeof o.message === "string" ? o.message : d.message,
+            submessage: typeof o.submessage === "string" ? o.submessage : d.submessage,
+            countdown: typeof o.countdown === "boolean" ? o.countdown : d.countdown,
+            countdownTarget: typeof o.countdownTarget === "string" ? o.countdownTarget : d.countdownTarget,
+            showEmail: typeof o.showEmail === "boolean" ? o.showEmail : d.showEmail,
+            emailPlaceholder: typeof o.emailPlaceholder === "string" ? o.emailPlaceholder : d.emailPlaceholder,
+            showSocial: typeof o.showSocial === "boolean" ? o.showSocial : d.showSocial,
+            socialLinks: Array.isArray(o.socialLinks)
+              ? (o.socialLinks as { platform?: unknown; url?: unknown }[]).map((it) => ({
+                  platform: typeof it?.platform === "string" ? it.platform : "",
+                  url: typeof it?.url === "string" ? it.url : "",
+                }))
+              : d.socialLinks,
+            showLogo: typeof o.showLogo === "boolean" ? o.showLogo : d.showLogo,
+            bg: typeof o.bg === "string" ? o.bg : d.bg,
+            textColor: typeof o.textColor === "string" ? o.textColor : d.textColor,
+            accentColor: typeof o.accentColor === "string" ? o.accentColor : d.accentColor,
+          });
+        }
+        continue;
+      }
       next[row.key] = readVal(row.value);
     }
     setValues(next);
@@ -354,6 +385,7 @@ export default function Settings() {
         homeTrust: { value: homeTrust },
         sectionMaxWidths: { value: sectionMaxWidths },
         productWatermark: { value: productWatermark },
+        siteMode: { value: siteMode },
         headerConfig: { value: header },
         openCodeZenApiKey: { value: values.openCodeZenApiKey },
         openCodeZenModel: { value: values.openCodeZenModel },
@@ -417,6 +449,7 @@ export default function Settings() {
           <TabsTrigger value="marque" className={tabTrigger(tab === "marque")}>Brand & Identity</TabsTrigger>
           <TabsTrigger value="entete" className={tabTrigger(tab === "entete")}>Header</TabsTrigger>
           <TabsTrigger value="accueil" className={tabTrigger(tab === "accueil")}>Home</TabsTrigger>
+          <TabsTrigger value="site" className={tabTrigger(tab === "site")}>Site Mode</TabsTrigger>
           <TabsTrigger value="api" className={tabTrigger(tab === "api")}>API & AI</TabsTrigger>
         </TabsList>
 
@@ -800,6 +833,193 @@ export default function Settings() {
                 </div>
               </TabsContent>
             </Tabs>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="site">
+          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-4">
+            <div>
+              <h3 className="font-hud text-sm font-bold mb-1">Site Mode</h3>
+              <p className="text-xs text-[var(--text-2)]">
+                Show a Coming Soon or Maintenance page to all public visitors. Admin and login pages stay accessible.
+              </p>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={siteMode.enabled}
+                onChange={(e) => setSiteMode((s) => ({ ...s, enabled: e.target.checked }))}
+                className="accent-[var(--gold)]"
+              />
+              Enable Site Mode
+            </label>
+
+            {siteMode.enabled && (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Page type</Label>
+                  <div className="flex gap-3">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--line)] px-4 py-2.5 hover:bg-white/5 has-[:checked]:border-[var(--gold)] has-[:checked]:bg-[var(--gold-dim)]">
+                      <input type="radio" name="siteModeType" value="coming-soon" checked={siteMode.mode === "coming-soon"} onChange={() => setSiteMode((s) => ({ ...s, mode: "coming-soon" }))} className="accent-[var(--gold)]" />
+                      <div>
+                        <span className="text-sm font-medium">Coming Soon</span>
+                        <span className="block text-[10px] text-[var(--text-2)]">Countdown + email signup</span>
+                      </div>
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[var(--line)] px-4 py-2.5 hover:bg-white/5 has-[:checked]:border-[var(--gold)] has-[:checked]:bg-[var(--gold-dim)]">
+                      <input type="radio" name="siteModeType" value="maintenance" checked={siteMode.mode === "maintenance"} onChange={() => setSiteMode((s) => ({ ...s, mode: "maintenance" }))} className="accent-[var(--gold)]" />
+                      <div>
+                        <span className="text-sm font-medium">Maintenance</span>
+                        <span className="block text-[10px] text-[var(--text-2)]">Back soon message</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Title</Label>
+                  <Input value={siteMode.title} onChange={(e) => setSiteMode((s) => ({ ...s, title: e.target.value }))} placeholder={siteMode.mode === "maintenance" ? "Under Maintenance" : "Coming Soon"} />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Message</Label>
+                  <textarea
+                    value={siteMode.message}
+                    onChange={(e) => setSiteMode((s) => ({ ...s, message: e.target.value }))}
+                    rows={2}
+                    className="w-full rounded-md border border-[var(--line)] bg-[var(--page)] px-3 py-2 text-sm"
+                    placeholder="We're launching something amazing."
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Sub-message (optional)</Label>
+                  <Input value={siteMode.submessage} onChange={(e) => setSiteMode((s) => ({ ...s, submessage: e.target.value }))} placeholder="Stay tuned — something great is on the way." />
+                </div>
+
+                {siteMode.mode === "coming-soon" && (
+                  <>
+                    <div className="rounded-lg border border-[var(--line)] bg-[var(--page)] p-3 space-y-2">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={siteMode.countdown} onChange={(e) => setSiteMode((s) => ({ ...s, countdown: e.target.checked }))} className="accent-[var(--gold)]" />
+                        Show countdown timer
+                      </label>
+                      {siteMode.countdown && (
+                        <div className="space-y-1.5">
+                          <Label>Launch date & time</Label>
+                          <Input type="datetime-local" value={siteMode.countdownTarget} onChange={(e) => setSiteMode((s) => ({ ...s, countdownTarget: e.target.value }))} />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-lg border border-[var(--line)] bg-[var(--page)] p-3 space-y-2">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={siteMode.showEmail} onChange={(e) => setSiteMode((s) => ({ ...s, showEmail: e.target.checked }))} className="accent-[var(--gold)]" />
+                        Show email signup form
+                      </label>
+                      {siteMode.showEmail && (
+                        <div className="space-y-1.5">
+                          <Label>Input placeholder</Label>
+                          <Input value={siteMode.emailPlaceholder} onChange={(e) => setSiteMode((s) => ({ ...s, emailPlaceholder: e.target.value }))} placeholder="Enter your email address" />
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                <div className="rounded-lg border border-[var(--line)] bg-[var(--page)] p-3 space-y-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={siteMode.showLogo} onChange={(e) => setSiteMode((s) => ({ ...s, showLogo: e.target.checked }))} className="accent-[var(--gold)]" />
+                    Show store logo
+                  </label>
+                </div>
+
+                <div className="rounded-lg border border-[var(--line)] bg-[var(--page)] p-3 space-y-3">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={siteMode.showSocial} onChange={(e) => setSiteMode((s) => ({ ...s, showSocial: e.target.checked }))} className="accent-[var(--gold)]" />
+                    Show social links
+                  </label>
+                  {siteMode.showSocial && (
+                    <div className="space-y-2">
+                      {siteMode.socialLinks.map((link, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <select
+                            value={link.platform}
+                            onChange={(e) => setSiteMode((s) => {
+                              const links = [...s.socialLinks];
+                              links[i] = { ...links[i], platform: e.target.value };
+                              return { ...s, socialLinks: links };
+                            })}
+                            className="w-36 rounded-md border border-[var(--line)] bg-[var(--page)] px-2 py-1.5 text-sm"
+                          >
+                            <option value="facebook">Facebook</option>
+                            <option value="instagram">Instagram</option>
+                            <option value="twitter">X (Twitter)</option>
+                            <option value="youtube">YouTube</option>
+                            <option value="tiktok">TikTok</option>
+                            <option value="linkedin">LinkedIn</option>
+                            <option value="whatsapp">WhatsApp</option>
+                          </select>
+                          <Input
+                            value={link.url}
+                            onChange={(e) => setSiteMode((s) => {
+                              const links = [...s.socialLinks];
+                              links[i] = { ...links[i], url: e.target.value };
+                              return { ...s, socialLinks: links };
+                            })}
+                            placeholder="https://…"
+                            className="flex-1"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setSiteMode((s) => ({ ...s, socialLinks: s.socialLinks.filter((_, idx) => idx !== i) }))}
+                            className="rounded p-1 text-[var(--text-2)] hover:bg-red-100 hover:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setSiteMode((s) => ({ ...s, socialLinks: [...s.socialLinks, { platform: "facebook", url: "" }] }))}
+                        className="flex items-center gap-1.5 rounded-lg border border-dashed border-[var(--line)] px-3 py-2 text-xs font-medium text-[var(--text-2)] hover:border-[var(--gold)] hover:text-[var(--gold)]"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add link
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Background</Label>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={siteMode.bg} onChange={(e) => setSiteMode((s) => ({ ...s, bg: e.target.value }))} className="h-9 w-12 cursor-pointer rounded border border-[var(--line)] bg-transparent p-1" />
+                      <span className="font-mono text-xs text-[var(--text-2)]">{siteMode.bg}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Text color</Label>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={siteMode.textColor} onChange={(e) => setSiteMode((s) => ({ ...s, textColor: e.target.value }))} className="h-9 w-12 cursor-pointer rounded border border-[var(--line)] bg-transparent p-1" />
+                      <span className="font-mono text-xs text-[var(--text-2)]">{siteMode.textColor}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Accent</Label>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={siteMode.accentColor} onChange={(e) => setSiteMode((s) => ({ ...s, accentColor: e.target.value }))} className="h-9 w-12 cursor-pointer rounded border border-[var(--line)] bg-transparent p-1" />
+                      <span className="font-mono text-xs text-[var(--text-2)]">{siteMode.accentColor}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg bg-[var(--gold-dim)] px-3 py-2 text-xs text-[var(--text-2)]">
+                  While enabled, visitors to the storefront see this page. You can still access <strong>/admin</strong>, <strong>/login</strong> and <strong>/register</strong> to turn it off.
+                </div>
+              </>
+            )}
           </div>
         </TabsContent>
 

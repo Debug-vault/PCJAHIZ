@@ -65,6 +65,24 @@ export type HeaderConfig = {
   mobileDrawer: { showSearch: boolean; showPhone: boolean; showAccount: boolean; showCompare: boolean; showCart: boolean };
 };
 
+export type SiteModeConfig = {
+  enabled: boolean;
+  mode: "coming-soon" | "maintenance";
+  title: string;
+  message: string;
+  submessage: string;
+  countdown: boolean;
+  countdownTarget: string;
+  showEmail: boolean;
+  emailPlaceholder: string;
+  showSocial: boolean;
+  socialLinks: { platform: string; url: string }[];
+  showLogo: boolean;
+  bg: string;
+  textColor: string;
+  accentColor: string;
+};
+
 export type StoreSettings = {
   storeName: string;
   storeLogo: string | null;
@@ -110,6 +128,7 @@ export type StoreSettings = {
   taxRate: { rate: number } | null;
   productWatermark: { enabled: boolean; opacity: number; size: number; logo: string | null; urlText: string; textColor: string; fontSize: number };
   header: HeaderConfig;
+  siteMode: SiteModeConfig;
 };
 
 export const DEFAULT_HEADER: HeaderConfig = {
@@ -228,6 +247,26 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   taxRate: { rate: 20 },
   productWatermark: { enabled: true, opacity: 5, size: 200, logo: null, urlText: "PCJahiz.ma", textColor: "#facc15", fontSize: 14 },
   header: DEFAULT_HEADER,
+  siteMode: {
+    enabled: false,
+    mode: "coming-soon",
+    title: "Coming Soon",
+    message: "We're launching something amazing.",
+    submessage: "Stay tuned — something great is on the way.",
+    countdown: true,
+    countdownTarget: "",
+    showEmail: true,
+    emailPlaceholder: "Enter your email address",
+    showSocial: true,
+    socialLinks: [
+      { platform: "facebook", url: "https://facebook.com" },
+      { platform: "instagram", url: "https://instagram.com" },
+    ],
+    showLogo: true,
+    bg: "#0a0a0a",
+    textColor: "#ffffff",
+    accentColor: "#FDD502",
+  },
 };
 
 function readBool(v: unknown, fallback: boolean): boolean {
@@ -426,6 +465,34 @@ export function normalizeSettings(raw: Record<string, unknown> | undefined): Sto
       };
     })(),
     header: readHeader(raw),
+    siteMode: (() => {
+      const raw2 = raw.siteMode as Record<string, unknown> | undefined;
+      const o = (raw2 && typeof raw2 === "object" && "value" in raw2 && raw2.value !== null && typeof raw2.value === "object" ? raw2.value : raw2) as Record<string, unknown> | undefined;
+      const d = DEFAULT_SETTINGS.siteMode;
+      if (!o || typeof o !== "object") return d;
+      return {
+        enabled: readBool(o.enabled, d.enabled),
+        mode: o.mode === "maintenance" ? "maintenance" : o.mode === "coming-soon" ? "coming-soon" : d.mode,
+        title: readStr(o.title, d.title),
+        message: readStr(o.message, d.message),
+        submessage: readStr(o.submessage, d.submessage),
+        countdown: readBool(o.countdown, d.countdown),
+        countdownTarget: readStr(o.countdownTarget, d.countdownTarget),
+        showEmail: readBool(o.showEmail, d.showEmail),
+        emailPlaceholder: readStr(o.emailPlaceholder, d.emailPlaceholder),
+        showSocial: readBool(o.showSocial, d.showSocial),
+        socialLinks: Array.isArray(o.socialLinks)
+          ? (o.socialLinks as { platform?: unknown; url?: unknown }[]).map((it) => ({
+              platform: typeof it?.platform === "string" ? it.platform : "",
+              url: typeof it?.url === "string" ? it.url : "",
+            }))
+          : d.socialLinks,
+        showLogo: readBool(o.showLogo, d.showLogo),
+        bg: readStr(o.bg, d.bg),
+        textColor: readStr(o.textColor, d.textColor),
+        accentColor: readStr(o.accentColor, d.accentColor),
+      };
+    })(),
   };
 }
 

@@ -117,9 +117,9 @@ export default function AdminLayout() {
       <aside className="fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-[var(--line)] bg-[var(--void-2)]">
         <div className="flex h-16 items-center gap-2 border-b border-[var(--line)] px-4">
           <Link to="/" className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--gold-dim)] font-hud text-sm font-bold text-[var(--gold)]">
+            <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-[var(--gold-dim)] font-hud text-base font-bold text-[var(--gold)]">
               {settings.storeLogo ? (
-                <img src={settings.storeLogo} alt={settings.storeName} className="h-8 w-8 rounded object-cover" />
+                <img src={settings.storeLogo} alt={settings.storeName} className="h-12 w-12 rounded-lg object-cover" />
               ) : (
                 "J"
               )}

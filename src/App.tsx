@@ -46,6 +46,7 @@ const AdminBlog = lazy(() => import("./pages/admin/Blog"));
 const AdminBulkImport = lazy(() => import("./pages/admin/BulkImport"));
 const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
+const SiteMode = lazy(() => import("./pages/SiteMode"));
 
 function AdminRoutes() {
   return (
@@ -124,6 +125,18 @@ function Shell() {
       <div dir="ltr">
         <Suspense fallback={<PageFallback />}>
           <AdminRoutes />
+        </Suspense>
+        <Toaster position="bottom-center" />
+      </div>
+    );
+  }
+
+  const siteModeActive = settings.siteMode.enabled && !bare;
+  if (siteModeActive) {
+    return (
+      <div dir="ltr">
+        <Suspense fallback={<PageFallback />}>
+          <SiteMode />
         </Suspense>
         <Toaster position="bottom-center" />
       </div>

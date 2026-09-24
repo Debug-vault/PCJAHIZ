@@ -8,6 +8,7 @@ export type SeoBundle = {
   description: string;
   lang: "fr";
   jsonLd: Record<string, unknown>[];
+  noindex?: boolean;
 };
 
 function esc(s: string): string {
@@ -40,9 +41,26 @@ async function storeInfo() {
   return { name: name ?? env.appName, logo: logo ?? "" };
 }
 
+async function isSiteModeActive(): Promise<boolean> {
+  try {
+    const rows = await getDb()
+      .select({ value: settings.value })
+      .from(settings)
+      .where(eq(settings.key, "siteMode"));
+    const v = rows[0]?.value;
+    const o = (v && typeof v === "object" && "value" in v && (v as { value: unknown }).value !== null && typeof (v as { value: unknown }).value === "object"
+      ? (v as { value: unknown }).value
+      : v) as Record<string, unknown> | null;
+    return !!o && typeof o === "object" && o.enabled === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function buildSeo(url: URL): Promise<SeoBundle | null> {
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
   const base = env.appBaseUrl.replace(/\/+$/, "");
+  const noindex = await isSiteModeActive();
 
   const home: SeoBundle = {
     lang: "fr",
@@ -50,6 +68,7 @@ export async function buildSeo(url: URL): Promise<SeoBundle | null> {
     description:
       "PC Jahiz — High-tech au Maroc. Prix en dirhams, livraison 24–48h partout au Maroc, paiement à la livraison.",
     jsonLd: [],
+    noindex,
   };
 
   // Home + generic pages get Organization/WebSite schema.
@@ -78,6 +97,7 @@ export async function buildSeo(url: URL): Promise<SeoBundle | null> {
   };
   const applyOrg = async (bundle: SeoBundle): Promise<SeoBundle> => ({
     ...bundle,
+    noindex: noindex || bundle.noindex,
     jsonLd: [...bundle.jsonLd, ...(await orgSchema())],
   });
 
@@ -96,6 +116,7 @@ export async function buildSeo(url: URL): Promise<SeoBundle | null> {
     const img = Array.isArray(row.images) && row.images.length ? row.images[0] : row.img;
     return {
       lang: "fr",
+      noindex,
       title: `${row.nameFr} — ${storeName}`,
       description: row.summaryFr || `Achetez ${row.nameFr} au Maroc.`,
       jsonLd: [
@@ -134,6 +155,7 @@ export async function buildSeo(url: URL): Promise<SeoBundle | null> {
     if (!row) return null;
     return {
       lang: "fr",
+      noindex,
       title: `${row.nameFr} — PC Jahiz`,
       description: row.description || `Découvrez la catégorie ${row.nameFr} chez PC Jahiz.`,
       jsonLd: [
@@ -195,6 +217,7 @@ export function seoHead(bundle: SeoBundle, url: URL): string {
   return [
     `<title>${safe.title}</title>`,
     `<meta name="description" content="${safe.description}" />`,
+    bundle.noindex ? `<meta name="robots" content="noindex, nofollow" />` : "",
     `<link rel="canonical" href="${esc(canonical)}" />`,
     `<link rel="alternate" hreflang="fr" href="${esc(canonical)}" />`,
     `<meta property="og:type" content="website" />`,
