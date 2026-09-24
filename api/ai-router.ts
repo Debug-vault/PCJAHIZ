@@ -186,6 +186,12 @@ const generateCategoryInput = z.object({
   parentCategory: z.string().optional(),
 });
 
+const generateSiteModeInput = z.object({
+  mode: z.enum(["coming-soon", "maintenance"]),
+  storeName: z.string().optional(),
+  hint: z.string().optional(),
+});
+
 // ===== Router =====
 export const aiRouter = createRouter({
   /** Generate a full product listing from a name + optional URL/SKU reference */
@@ -500,6 +506,44 @@ Retourne un JSON avec:
 - description: sous-titre (1-2 phrases)
 - ctaLabel: texte du bouton CTA
 - bgColor: couleur de fond hex suggérée (ex: "#1a1a2e")`,
+      );
+
+      return result;
+    }),
+
+  /** Generate Coming Soon / Maintenance page content in French AND English */
+  generateSiteMode: adminQuery
+    .input(generateSiteModeInput)
+    .mutation(async ({ input }) => {
+      const result = await generate<{
+        titleFr: string;
+        titleEn: string;
+        messageFr: string;
+        messageEn: string;
+        submessageFr: string;
+        submessageEn: string;
+        emailPlaceholderFr: string;
+        emailPlaceholderEn: string;
+      }>(
+        `Tu es un expert copywriting bilingue (français/anglais) pour la marque "PC Jahiz", e-commerce high-tech au Maroc.
+Tu écris des textes percutants, professionnels et courts, adaptés à une page d'attente (coming soon) ou une page de maintenance.
+Réponds TOUJOURS avec du JSON valide, sans texte avant ou après.
+IMPORTANT: Le JSON doit être strictement valide — pas de virgules finales, pas de commentaires, pas de texte hors du JSON.`,
+        `Génère le contenu d'une page "${input.mode === "maintenance" ? "Maintenance" : "Coming Soon"}" pour PC Jahiz.
+Boutique: ${input.storeName || "PC Jahiz"} — e-commerce informatique & électronique au Maroc.
+${input.hint ? `Contexte/indice de l'administrateur: ${input.hint}` : ""}
+
+Retourne un JSON avec exactement ces champs:
+- titleFr: titre en français (40 car. max, accrocheur)
+- titleEn: titre en anglais (40 car. max, accrocheur)
+- messageFr: message principal en français (1-2 phrases, chaleureux et rassurant)
+- messageEn: message principal en anglais (1-2 phrases)
+- submessageFr: sous-message court en français (1 phrase)
+- submessageEn: sous-message court en anglais (1 phrase)
+- emailPlaceholderFr: placeholder du champ email en français (ex: "Entrez votre adresse e-mail")
+- emailPlaceholderEn: placeholder du champ email en anglais (ex: "Enter your email address")
+
+Ton: moderne, premium, orienté marque. Le français doit être naturel (pas de traduction littérale de l'anglais).`,
       );
 
       return result;

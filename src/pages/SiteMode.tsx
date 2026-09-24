@@ -3,6 +3,7 @@ import { Wrench, Rocket, Check, Loader2 } from "lucide-react";
 import { useStoreSettings } from "@/lib/settings";
 
 type SocialLink = { platform: string; url: string };
+type Lang = "fr" | "en";
 
 const SOCIAL_META: Record<string, { label: string; icon: string }> = {
   facebook: { label: "Facebook", icon: "M22 12a10 10 0 1 0-11.5 9.9v-7H8v-2.9h2.5V12c0-2.4 1.5-3.8 3.7-3.8 1 0 2.1.2 2.1.2v2.4h-1.2c-1.2 0-1.5.7-1.5 1.5v1.8h2.6l-.4 2.9h-2.2v7A10 10 0 0 0 22 12Z" },
@@ -14,6 +15,39 @@ const SOCIAL_META: Record<string, { label: string; icon: string }> = {
   whatsapp: { label: "WhatsApp", icon: "M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.2-.7.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.2-1.2-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.3.2-1.4-.1-.2-.3-.2-.6-.4ZM12 2A10 10 0 0 0 2 12c0 1.8.5 3.5 1.4 5L2 22l5.2-1.4A10 10 0 1 0 12 2Z" },
 };
 
+const UI = {
+  fr: {
+    badgeCS: "Bientôt disponible",
+    badgeMaint: "Maintenance en cours",
+    titleCS: "Bientôt disponible",
+    titleMaint: "Maintenance en cours",
+    days: "Jours",
+    hours: "Heures",
+    minutes: "Minutes",
+    seconds: "Secondes",
+    notify: "Me prévenir",
+    success: "Merci — vous serez parmi les premiers informés !",
+    footer: "Bientôt disponible",
+    footerMaint: "Nous revenons bientôt",
+    invalidEmail: "Adresse e-mail invalide",
+  },
+  en: {
+    badgeCS: "Coming Soon",
+    badgeMaint: "Under Maintenance",
+    titleCS: "Coming Soon",
+    titleMaint: "Under Maintenance",
+    days: "Days",
+    hours: "Hours",
+    minutes: "Minutes",
+    seconds: "Seconds",
+    notify: "Notify me",
+    success: "Thanks — you'll be the first to know!",
+    footer: "Launching soon",
+    footerMaint: "We'll be right back",
+    invalidEmail: "Invalid email address",
+  },
+} as const;
+
 function SocialIcon({ platform }: { platform: string }) {
   const meta = SOCIAL_META[platform.toLowerCase()];
   if (!meta) return <span className="text-xs opacity-60">{platform}</span>;
@@ -24,7 +58,7 @@ function SocialIcon({ platform }: { platform: string }) {
   );
 }
 
-function Countdown({ target }: { target: string }) {
+function Countdown({ target, lang }: { target: string; lang: Lang }) {
   const getRemaining = () => {
     const diff = new Date(target).getTime() - Date.now();
     if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
@@ -42,10 +76,10 @@ function Countdown({ target }: { target: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target]);
   const units: [number, string][] = [
-    [t.days, "Days"],
-    [t.hours, "Hours"],
-    [t.minutes, "Minutes"],
-    [t.seconds, "Seconds"],
+    [t.days, UI[lang].days],
+    [t.hours, UI[lang].hours],
+    [t.minutes, UI[lang].minutes],
+    [t.seconds, UI[lang].seconds],
   ];
   if (t.days === 0 && t.hours === 0 && t.minutes === 0 && t.seconds === 0) return null;
   return (
@@ -54,20 +88,20 @@ function Countdown({ target }: { target: string }) {
         <div key={label} className="flex flex-col items-center">
           <div
             className="flex h-16 w-16 items-center justify-center rounded-xl border sm:h-20 sm:w-20"
-            style={{ borderColor: "var(--sm-accent, #FDD502)", background: "rgba(255,255,255,0.04)" }}
+            style={{ borderColor: "var(--sm-accent)", background: "var(--sm-tint)" }}
           >
-            <span className="font-hud text-2xl font-bold sm:text-3xl" style={{ color: "var(--sm-accent, #FDD502)" }}>
+            <span className="font-hud text-2xl font-bold text-[var(--sm-text)] sm:text-3xl">
               {String(v).padStart(2, "0")}
             </span>
           </div>
-          <span className="mt-2 text-[10px] uppercase tracking-widest opacity-60">{label}</span>
+          <span className="mt-2 text-[10px] uppercase tracking-widest text-[var(--sm-muted)]">{label}</span>
         </div>
       ))}
     </div>
   );
 }
 
-function EmailForm({ placeholder, accent }: { placeholder: string; accent: string }) {
+function EmailForm({ placeholder, lang }: { placeholder: string; lang: Lang }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "done">("idle");
   const submit = (e: FormEvent) => {
@@ -78,9 +112,8 @@ function EmailForm({ placeholder, accent }: { placeholder: string; accent: strin
   };
   if (state === "done") {
     return (
-      <div className="flex items-center justify-center gap-2 rounded-xl border px-5 py-3.5 text-sm font-medium"
-        style={{ borderColor: accent, color: accent }}>
-        <Check className="h-4 w-4" /> Thanks — you'll be the first to know!
+      <div className="mx-auto flex w-full max-w-md items-center justify-center gap-2 rounded-xl border border-[var(--sm-accent-strong)] bg-[var(--sm-tint-strong)] px-5 py-3.5 text-sm font-medium text-[var(--sm-text)]">
+        <Check className="h-4 w-4 text-[var(--sm-accent-strong)]" /> {UI[lang].success}
       </div>
     );
   }
@@ -92,15 +125,15 @@ function EmailForm({ placeholder, accent }: { placeholder: string; accent: strin
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder={placeholder}
-        className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3.5 text-sm text-white placeholder-white/40 outline-none transition focus:border-white/40"
+        className="min-w-0 flex-1 rounded-xl border border-[var(--sm-border-strong)] bg-[var(--sm-input)] px-4 py-3.5 text-sm text-[var(--sm-text)] outline-none transition focus:border-[var(--sm-accent-strong)]"
       />
       <button
         type="submit"
         disabled={state === "loading"}
-        className="flex shrink-0 items-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold text-black transition hover:brightness-110 disabled:opacity-70"
-        style={{ background: accent }}
+        className="flex shrink-0 items-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold transition hover:brightness-110 disabled:opacity-70"
+        style={{ background: "var(--sm-accent)", color: "var(--sm-on-accent)" }}
       >
-        {state === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Notify me"}
+        {state === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : UI[lang].notify}
       </button>
     </form>
   );
@@ -110,11 +143,33 @@ export default function SiteMode() {
   const { settings } = useStoreSettings();
   const cfg = settings.siteMode;
   const isMaintenance = cfg.mode === "maintenance";
-  const accent = cfg.accentColor || "#FDD502";
+  const [lang, setLang] = useState<Lang>(cfg.lang === "en" ? "en" : "fr");
+
+  const title = lang === "fr" ? cfg.titleFr : cfg.titleEn;
+  const message = lang === "fr" ? cfg.messageFr : cfg.messageEn;
+  const submessage = lang === "fr" ? cfg.submessageFr : cfg.submessageEn;
+  const emailPlaceholder = lang === "fr" ? cfg.emailPlaceholderFr : cfg.emailPlaceholderEn;
+  const t = UI[lang];
 
   useEffect(() => {
-    document.documentElement.style.setProperty("--sm-accent", accent);
-    document.documentElement.style.setProperty("--sm-bg", cfg.bg);
+    const r = document.documentElement;
+    r.style.setProperty("--sm-accent", cfg.accentColor);
+    r.style.setProperty("--sm-text", cfg.textColor);
+    r.style.setProperty("--sm-muted", `${cfg.textColor}99`);
+    r.style.setProperty("--sm-border", `${cfg.textColor}1f`);
+    r.style.setProperty("--sm-border-strong", `${cfg.textColor}33`);
+    r.style.setProperty("--sm-input", `${cfg.textColor}0a`);
+    r.style.setProperty("--sm-tint", `${cfg.accentColor}1a`);
+    r.style.setProperty("--sm-tint-strong", `${cfg.accentColor}33`);
+    r.style.setProperty("--sm-accent-strong", cfg.accentColor);
+    r.style.setProperty("--sm-glow", `${cfg.accentColor}14`);
+    // readable text on accent (black on light accents, white on dark)
+    const hex = cfg.accentColor.replace("#", "");
+    const full = hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex;
+    const [r8, g8, b8] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) || 0);
+    const lum = (0.299 * r8 + 0.587 * g8 + 0.114 * b8) / 255;
+    r.style.setProperty("--sm-on-accent", lum > 0.55 ? "#0b0d10" : "#ffffff");
+
     let meta = document.querySelector<HTMLMetaElement>("meta[name='robots']");
     if (!meta) {
       meta = document.createElement("meta");
@@ -135,7 +190,7 @@ export default function SiteMode() {
       document.querySelector<HTMLMetaElement>("meta[name='robots']")?.remove();
       document.querySelector<HTMLMetaElement>("meta[name='refresh']")?.remove();
     };
-  }, [accent, cfg.bg, isMaintenance]);
+  }, [cfg.accentColor, cfg.textColor, isMaintenance]);
 
   const visibleSocials = (cfg.socialLinks || []).filter((s: SocialLink) => s.platform && s.url);
 
@@ -149,45 +204,64 @@ export default function SiteMode() {
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px]"
-        style={{ background: accent, opacity: 0.08 }}
+        style={{ background: cfg.accentColor, opacity: 0.12 }}
       />
       <div
         aria-hidden
         className="pointer-events-none absolute -left-40 bottom-0 h-[300px] w-[300px] rounded-full blur-[100px]"
-        style={{ background: accent, opacity: 0.05 }}
+        style={{ background: cfg.accentColor, opacity: 0.08 }}
       />
+
+      {/* language toggle */}
+      <div className="absolute right-5 top-5 z-20 flex overflow-hidden rounded-full border border-[var(--sm-border-strong)]">
+        {(["fr", "en"] as Lang[]).map((l) => (
+          <button
+            key={l}
+            type="button"
+            onClick={() => setLang(l)}
+            className="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition"
+            style={
+              lang === l
+                ? { background: cfg.accentColor, color: "var(--sm-on-accent)" }
+                : { color: "var(--sm-muted)" }
+            }
+          >
+            {l}
+          </button>
+        ))}
+      </div>
 
       <div className="relative z-10 flex w-full max-w-2xl flex-col items-center gap-7 reveal-up">
         {cfg.showLogo && settings.storeLogo ? (
           <img src={settings.storeLogo} alt={settings.storeName} className="h-16 w-auto object-contain sm:h-20" />
         ) : cfg.showLogo ? (
-          <span className="font-hud text-3xl font-bold" style={{ color: accent }}>{settings.storeName}</span>
+          <span className="font-hud text-3xl font-bold" style={{ color: cfg.accentColor }}>{settings.storeName}</span>
         ) : null}
 
         <span
-          className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium uppercase tracking-widest"
-          style={{ borderColor: `${accent}44`, color: accent }}
+          className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest"
+          style={{ background: cfg.accentColor, color: "var(--sm-on-accent)" }}
         >
           {isMaintenance ? <Wrench className="h-3.5 w-3.5" /> : <Rocket className="h-3.5 w-3.5" />}
-          {isMaintenance ? "Under Maintenance" : "Coming Soon"}
+          {isMaintenance ? t.badgeMaint : t.badgeCS}
         </span>
 
-        <h1 className="font-hud text-4xl font-bold leading-tight sm:text-5xl">
-          {cfg.title || (isMaintenance ? "Under Maintenance" : "Coming Soon")}
+        <h1 className="font-hud text-4xl font-bold leading-tight sm:text-5xl" style={{ color: cfg.textColor }}>
+          {title || (isMaintenance ? t.titleMaint : t.titleCS)}
         </h1>
 
-        <p className="max-w-xl text-base leading-relaxed opacity-70">{cfg.message}</p>
-        {cfg.submessage && <p className="max-w-xl text-sm opacity-45">{cfg.submessage}</p>}
+        <p className="max-w-xl text-base leading-relaxed" style={{ color: `${cfg.textColor}b3` }}>{message}</p>
+        {submessage && <p className="max-w-xl text-sm" style={{ color: `${cfg.textColor}73` }}>{submessage}</p>}
 
         {cfg.countdown && cfg.countdownTarget && !isMaintenance && (
           <div className="mt-2">
-            <Countdown target={cfg.countdownTarget} />
+            <Countdown target={cfg.countdownTarget} lang={lang} />
           </div>
         )}
 
         {cfg.showEmail && !isMaintenance && (
           <div className="mt-2 w-full">
-            <EmailForm placeholder={cfg.emailPlaceholder || "Enter your email address"} accent={accent} />
+            <EmailForm placeholder={emailPlaceholder} lang={lang} />
           </div>
         )}
 
@@ -200,10 +274,8 @@ export default function SiteMode() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={SOCIAL_META[s.platform.toLowerCase()]?.label || s.platform}
-                className="flex h-11 w-11 items-center justify-center rounded-full border transition hover:scale-110"
-                style={{ borderColor: `${accent}33`, color: cfg.textColor, opacity: 0.7 }}
-                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--sm-border-strong)] transition hover:border-[var(--sm-accent-strong)] hover:scale-110"
+                style={{ color: cfg.textColor }}
               >
                 <SocialIcon platform={s.platform} />
               </a>
@@ -211,8 +283,8 @@ export default function SiteMode() {
           </div>
         )}
 
-        <p className="mt-6 font-mono2 text-[10px] uppercase tracking-widest opacity-30">
-          {isMaintenance ? "We'll be right back" : "Launching soon"} · {settings.storeName}
+        <p className="mt-6 font-mono2 text-[10px] uppercase tracking-widest" style={{ color: `${cfg.textColor}59` }}>
+          {isMaintenance ? t.footerMaint : t.footer} · {settings.storeName}
         </p>
       </div>
     </div>

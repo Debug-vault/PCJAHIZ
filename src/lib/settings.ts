@@ -68,13 +68,18 @@ export type HeaderConfig = {
 export type SiteModeConfig = {
   enabled: boolean;
   mode: "coming-soon" | "maintenance";
-  title: string;
-  message: string;
-  submessage: string;
+  lang: "fr" | "en";
+  titleFr: string;
+  titleEn: string;
+  messageFr: string;
+  messageEn: string;
+  submessageFr: string;
+  submessageEn: string;
+  emailPlaceholderFr: string;
+  emailPlaceholderEn: string;
   countdown: boolean;
   countdownTarget: string;
   showEmail: boolean;
-  emailPlaceholder: string;
   showSocial: boolean;
   socialLinks: { platform: string; url: string }[];
   showLogo: boolean;
@@ -250,21 +255,26 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   siteMode: {
     enabled: false,
     mode: "coming-soon",
-    title: "Coming Soon",
-    message: "We're launching something amazing.",
-    submessage: "Stay tuned — something great is on the way.",
+    lang: "fr",
+    titleFr: "Bientôt disponible",
+    titleEn: "Coming Soon",
+    messageFr: "Nous préparons quelque chose d'exceptionnel pour vous.",
+    messageEn: "We're preparing something exceptional for you.",
+    submessageFr: "Restez connecté — quelque chose de grand arrive bientôt.",
+    submessageEn: "Stay tuned — something great is on the way.",
+    emailPlaceholderFr: "Entrez votre adresse e-mail",
+    emailPlaceholderEn: "Enter your email address",
     countdown: true,
     countdownTarget: "",
     showEmail: true,
-    emailPlaceholder: "Enter your email address",
     showSocial: true,
     socialLinks: [
       { platform: "facebook", url: "https://facebook.com" },
       { platform: "instagram", url: "https://instagram.com" },
     ],
     showLogo: true,
-    bg: "#0a0a0a",
-    textColor: "#ffffff",
+    bg: "#f7f7f4",
+    textColor: "#101014",
     accentColor: "#FDD502",
   },
 };
@@ -473,13 +483,19 @@ export function normalizeSettings(raw: Record<string, unknown> | undefined): Sto
       return {
         enabled: readBool(o.enabled, d.enabled),
         mode: o.mode === "maintenance" ? "maintenance" : o.mode === "coming-soon" ? "coming-soon" : d.mode,
-        title: readStr(o.title, d.title),
-        message: readStr(o.message, d.message),
-        submessage: readStr(o.submessage, d.submessage),
+        lang: o.lang === "en" ? "en" : "fr",
+        // FR fields fall back to legacy single-language fields
+        titleFr: readStr(o.titleFr, readStr(o.title, d.titleFr)),
+        titleEn: readStr(o.titleEn, d.titleEn),
+        messageFr: readStr(o.messageFr, readStr(o.message, d.messageFr)),
+        messageEn: readStr(o.messageEn, d.messageEn),
+        submessageFr: readStr(o.submessageFr, readStr(o.submessage, d.submessageFr)),
+        submessageEn: readStr(o.submessageEn, d.submessageEn),
+        emailPlaceholderFr: readStr(o.emailPlaceholderFr, readStr(o.emailPlaceholder, d.emailPlaceholderFr)),
+        emailPlaceholderEn: readStr(o.emailPlaceholderEn, d.emailPlaceholderEn),
         countdown: readBool(o.countdown, d.countdown),
         countdownTarget: readStr(o.countdownTarget, d.countdownTarget),
         showEmail: readBool(o.showEmail, d.showEmail),
-        emailPlaceholder: readStr(o.emailPlaceholder, d.emailPlaceholder),
         showSocial: readBool(o.showSocial, d.showSocial),
         socialLinks: Array.isArray(o.socialLinks)
           ? (o.socialLinks as { platform?: unknown; url?: unknown }[]).map((it) => ({

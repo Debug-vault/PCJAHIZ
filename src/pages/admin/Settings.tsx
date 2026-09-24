@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Eye, EyeOff, Plus, Trash2, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, Eye, EyeOff, Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
@@ -84,6 +84,8 @@ export default function Settings() {
   const [sectionMaxWidths, setSectionMaxWidths] = useState(DEFAULT_SETTINGS.sectionMaxWidths);
   const [productWatermark, setProductWatermark] = useState(DEFAULT_SETTINGS.productWatermark);
   const [siteMode, setSiteMode] = useState<SiteModeConfig>(DEFAULT_SETTINGS.siteMode);
+  const [siteModeLang, setSiteModeLang] = useState<"fr" | "en">("fr");
+  const generateSiteMode = trpc.ai.generateSiteMode.useMutation();
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -327,16 +329,22 @@ export default function Settings() {
         const o = (rawSm && typeof rawSm === "object" && "value" in rawSm && rawSm.value !== null && typeof rawSm.value === "object" ? rawSm.value : rawSm) as Record<string, unknown> | null;
         if (o && typeof o === "object") {
           const d = DEFAULT_SETTINGS.siteMode;
+          const str = (v: unknown, fb: string) => (typeof v === "string" ? v : fb);
           setSiteMode({
             enabled: typeof o.enabled === "boolean" ? o.enabled : d.enabled,
             mode: o.mode === "maintenance" ? "maintenance" : o.mode === "coming-soon" ? "coming-soon" : d.mode,
-            title: typeof o.title === "string" ? o.title : d.title,
-            message: typeof o.message === "string" ? o.message : d.message,
-            submessage: typeof o.submessage === "string" ? o.submessage : d.submessage,
+            lang: o.lang === "en" ? "en" : "fr",
+            titleFr: str(o.titleFr, str(o.title, d.titleFr)),
+            titleEn: str(o.titleEn, d.titleEn),
+            messageFr: str(o.messageFr, str(o.message, d.messageFr)),
+            messageEn: str(o.messageEn, d.messageEn),
+            submessageFr: str(o.submessageFr, str(o.submessage, d.submessageFr)),
+            submessageEn: str(o.submessageEn, d.submessageEn),
+            emailPlaceholderFr: str(o.emailPlaceholderFr, str(o.emailPlaceholder, d.emailPlaceholderFr)),
+            emailPlaceholderEn: str(o.emailPlaceholderEn, d.emailPlaceholderEn),
             countdown: typeof o.countdown === "boolean" ? o.countdown : d.countdown,
-            countdownTarget: typeof o.countdownTarget === "string" ? o.countdownTarget : d.countdownTarget,
+            countdownTarget: str(o.countdownTarget, d.countdownTarget),
             showEmail: typeof o.showEmail === "boolean" ? o.showEmail : d.showEmail,
-            emailPlaceholder: typeof o.emailPlaceholder === "string" ? o.emailPlaceholder : d.emailPlaceholder,
             showSocial: typeof o.showSocial === "boolean" ? o.showSocial : d.showSocial,
             socialLinks: Array.isArray(o.socialLinks)
               ? (o.socialLinks as { platform?: unknown; url?: unknown }[]).map((it) => ({
@@ -345,9 +353,9 @@ export default function Settings() {
                 }))
               : d.socialLinks,
             showLogo: typeof o.showLogo === "boolean" ? o.showLogo : d.showLogo,
-            bg: typeof o.bg === "string" ? o.bg : d.bg,
-            textColor: typeof o.textColor === "string" ? o.textColor : d.textColor,
-            accentColor: typeof o.accentColor === "string" ? o.accentColor : d.accentColor,
+            bg: str(o.bg, d.bg),
+            textColor: str(o.textColor, d.textColor),
+            accentColor: str(o.accentColor, d.accentColor),
           });
         }
         continue;
@@ -358,6 +366,30 @@ export default function Settings() {
   }, [data]);
 
   const set = (k: string, v: string) => setValues((s) => ({ ...s, [k]: v }));
+
+  const handleAiGenerate = async () => {
+    try {
+      const r = await generateSiteMode.mutateAsync({
+        mode: siteMode.mode,
+        storeName: values.storeName,
+      });
+      setSiteMode((s) => ({
+        ...s,
+        titleFr: r.titleFr ?? s.titleFr,
+        titleEn: r.titleEn ?? s.titleEn,
+        messageFr: r.messageFr ?? s.messageFr,
+        messageEn: r.messageEn ?? s.messageEn,
+        submessageFr: r.submessageFr ?? s.submessageFr,
+        submessageEn: r.submessageEn ?? s.submessageEn,
+        emailPlaceholderFr: r.emailPlaceholderFr ?? s.emailPlaceholderFr,
+        emailPlaceholderEn: r.emailPlaceholderEn ?? s.emailPlaceholderEn,
+      }));
+      toast.success("Content generated (FR + EN) — click Save to apply");
+    } catch (err) {
+      console.error("Site mode AI generation failed:", err);
+      toast.error(err instanceof Error ? err.message : "AI generation failed");
+    }
+  };
 
   const save = async () => {
     setSaveError(null);
@@ -877,25 +909,76 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label>Title</Label>
-                  <Input value={siteMode.title} onChange={(e) => setSiteMode((s) => ({ ...s, title: e.target.value }))} placeholder={siteMode.mode === "maintenance" ? "Under Maintenance" : "Coming Soon"} />
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button type="button" variant="outline" size="sm" onClick={handleAiGenerate} disabled={generateSiteMode.isPending}>
+                    {generateSiteMode.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
+                    Generate content (FR + EN)
+                  </Button>
+                  <span className="text-[11px] text-[var(--text-2)]">AI writes the title, message & sub-message in both languages — then click Save.</span>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label>Message</Label>
-                  <textarea
-                    value={siteMode.message}
-                    onChange={(e) => setSiteMode((s) => ({ ...s, message: e.target.value }))}
-                    rows={2}
-                    className="w-full rounded-md border border-[var(--line)] bg-[var(--page)] px-3 py-2 text-sm"
-                    placeholder="We're launching something amazing."
-                  />
+                  <Label>Display language (page default)</Label>
+                  <div className="flex gap-2">
+                    {(["fr", "en"] as const).map((l) => (
+                      <button
+                        key={l}
+                        type="button"
+                        onClick={() => setSiteMode((s) => ({ ...s, lang: l }))}
+                        className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${siteMode.lang === l ? "bg-[var(--gold)] text-black" : "bg-[var(--page-soft)] text-[var(--text-2)] hover:text-[var(--text-1)]"}`}
+                      >
+                        {l === "fr" ? "French" : "English"}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-[var(--text-2)]">Visitors can switch languages on the page with the FR/EN toggle.</p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label>Sub-message (optional)</Label>
-                  <Input value={siteMode.submessage} onChange={(e) => setSiteMode((s) => ({ ...s, submessage: e.target.value }))} placeholder="Stay tuned — something great is on the way." />
+                <div className="space-y-3 border-t border-[var(--line)] pt-3">
+                  <div className="flex items-center gap-2">
+                    <Label className="mb-0">Content language</Label>
+                    <div className="flex overflow-hidden rounded-lg border border-[var(--line)]">
+                      {(["fr", "en"] as const).map((l) => (
+                        <button
+                          key={l}
+                          type="button"
+                          onClick={() => setSiteModeLang(l)}
+                          className={`px-3 py-1.5 text-xs font-bold uppercase transition ${siteModeLang === l ? "bg-[var(--gold)] text-black" : "bg-[var(--page-soft)] text-[var(--text-2)] hover:text-[var(--text-1)]"}`}
+                        >
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Title {siteModeLang === "fr" ? "(français)" : "(english)"}</Label>
+                    <Input
+                      value={siteModeLang === "fr" ? siteMode.titleFr : siteMode.titleEn}
+                      onChange={(e) => setSiteMode((s) => (siteModeLang === "fr" ? { ...s, titleFr: e.target.value } : { ...s, titleEn: e.target.value }))}
+                      placeholder={siteMode.mode === "maintenance" ? (siteModeLang === "fr" ? "Maintenance en cours" : "Under Maintenance") : siteModeLang === "fr" ? "Bientôt disponible" : "Coming Soon"}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Message</Label>
+                    <textarea
+                      value={siteModeLang === "fr" ? siteMode.messageFr : siteMode.messageEn}
+                      onChange={(e) => setSiteMode((s) => (siteModeLang === "fr" ? { ...s, messageFr: e.target.value } : { ...s, messageEn: e.target.value }))}
+                      rows={2}
+                      className="w-full rounded-md border border-[var(--line)] bg-[var(--page)] px-3 py-2 text-sm"
+                      placeholder={siteModeLang === "fr" ? "Nous préparons quelque chose d'exceptionnel." : "We're preparing something exceptional."}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Sub-message (optional)</Label>
+                    <Input
+                      value={siteModeLang === "fr" ? siteMode.submessageFr : siteMode.submessageEn}
+                      onChange={(e) => setSiteMode((s) => (siteModeLang === "fr" ? { ...s, submessageFr: e.target.value } : { ...s, submessageEn: e.target.value }))}
+                      placeholder={siteModeLang === "fr" ? "Restez connecté — quelque chose de grand arrive." : "Stay tuned — something great is on the way."}
+                    />
+                  </div>
                 </div>
 
                 {siteMode.mode === "coming-soon" && (
@@ -920,8 +1003,12 @@ export default function Settings() {
                       </label>
                       {siteMode.showEmail && (
                         <div className="space-y-1.5">
-                          <Label>Input placeholder</Label>
-                          <Input value={siteMode.emailPlaceholder} onChange={(e) => setSiteMode((s) => ({ ...s, emailPlaceholder: e.target.value }))} placeholder="Enter your email address" />
+                          <Label>Input placeholder {siteModeLang === "fr" ? "(français)" : "(english)"}</Label>
+                          <Input
+                            value={siteModeLang === "fr" ? siteMode.emailPlaceholderFr : siteMode.emailPlaceholderEn}
+                            onChange={(e) => setSiteMode((s) => (siteModeLang === "fr" ? { ...s, emailPlaceholderFr: e.target.value } : { ...s, emailPlaceholderEn: e.target.value }))}
+                            placeholder={siteModeLang === "fr" ? "Entrez votre adresse e-mail" : "Enter your email address"}
+                          />
                         </div>
                       )}
                     </div>
