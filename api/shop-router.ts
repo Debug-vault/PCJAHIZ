@@ -33,6 +33,43 @@ const listInput = z.object({
   limit: z.number().int().min(1).max(60).optional(),
 });
 
+/**
+ * Keys served to the public via shop.settings — must match what
+ * normalizeSettings() reads (src/lib/settings.ts). Everything else
+ * (API keys, AI config, internal state) must NEVER leave the server.
+ * Keep in sync with StoreSettings when adding new public settings.
+ */
+const PUBLIC_SETTINGS_KEYS = [
+  "storeName",
+  "storeLogo",
+  "storeFavicon",
+  "contactPhone",
+  "contactEmail",
+  "themeAccent",
+  "themeAccent2",
+  "marqueeEnabled",
+  "marqueeItems",
+  "marqueeBg",
+  "marqueeText",
+  "homeHero",
+  "homeProducts",
+  "homeBrandsMarquee",
+  "homeTrust",
+  "codEnabled",
+  "footerLogoSize",
+  "footerAlign",
+  "storeMaxWidth",
+  "sectionMaxWidths",
+  "taxRate",
+  "productWatermark",
+  "headerConfig",
+  "footerPayments",
+  "footerLegal",
+  "siteMode",
+] as const;
+
+const SECRET_KEY_PATTERN = /apikey|secret|token|password/i;
+
 function productCard(p: typeof products.$inferSelect) {
   const img = Array.isArray(p.images) && p.images.length ? p.images[0] : p.img;
   return {
@@ -106,7 +143,11 @@ export const shopRouter = createRouter({
   settings: publicQuery.query(async () => {
     const rows = await getDb().select().from(settings).orderBy(asc(settings.key));
     const map: Record<string, unknown> = {};
-    for (const row of rows) map[row.key] = row.value;
+    for (const row of rows) {
+      if (SECRET_KEY_PATTERN.test(row.key)) continue;
+      if (!(PUBLIC_SETTINGS_KEYS as readonly string[]).includes(row.key)) continue;
+      map[row.key] = row.value;
+    }
     return map;
   }),
 
