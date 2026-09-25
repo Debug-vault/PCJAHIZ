@@ -2,6 +2,7 @@ import { eq, and } from "drizzle-orm";
 import { getDb } from "../queries/connection";
 import { products, categories, settings } from "@db/schema";
 import { env } from "./env";
+import { readLegalPages } from "./legal";
 
 export type SeoBundle = {
   title: string;
@@ -168,6 +169,30 @@ export async function buildSeo(url: URL): Promise<SeoBundle | null> {
         },
       ],
     };
+  }
+
+  // /legal/:slug
+  const legalMatch = pathname.match(/^\/legal\/([^/]+)$/);
+  if (legalMatch) {
+    const slug = decodeURIComponent(legalMatch[1]);
+    const page = (await readLegalPages()).find((p) => p.slug === slug && p.enabled);
+    if (!page) return null;
+    const { name: storeName } = await storeInfo();
+    const text = page.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return applyOrg({
+      lang: "fr",
+      noindex,
+      title: `${page.title} — ${storeName}`,
+      description: (text.slice(0, 155) || `${page.title} — ${storeName}`).trim(),
+      jsonLd: [
+        {
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          name: page.title,
+          url: `${base}/legal/${page.slug}`,
+        },
+      ],
+    });
   }
 
   // /brand/:slug (admin brand page) — not a public route; skip.

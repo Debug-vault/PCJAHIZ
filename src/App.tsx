@@ -44,8 +44,10 @@ const AdminNewsletter = lazy(() => import("./pages/admin/Newsletter"));
 const AdminHeroBuilder = lazy(() => import("./pages/admin/hero-builder"));
 const AdminBlog = lazy(() => import("./pages/admin/Blog"));
 const AdminBulkImport = lazy(() => import("./pages/admin/BulkImport"));
+const AdminLegalPages = lazy(() => import("./pages/admin/LegalPages"));
 const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
+const LegalPage = lazy(() => import("./pages/LegalPage"));
 const SiteMode = lazy(() => import("./pages/SiteMode"));
 
 function AdminRoutes() {
@@ -66,6 +68,7 @@ function AdminRoutes() {
         <Route path="quotes" element={<AdminQuoteRequests />} />
         <Route path="newsletter" element={<AdminNewsletter />} />
         <Route path="blog" element={<AdminBlog />} />
+        <Route path="legal" element={<AdminLegalPages />} />
         <Route path="bulk-import" element={<AdminBulkImport />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="hero" element={<AdminHeroBuilder />} />
@@ -165,6 +168,7 @@ function Shell() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/legal/:slug" element={<LegalPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

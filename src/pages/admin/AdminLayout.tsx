@@ -19,6 +19,7 @@ import {
   Settings2,
   BookOpen,
   Upload,
+  Scale,
   type LucideIcon,
 } from "lucide-react";
 import { trpc } from "@/providers/trpc";
@@ -68,7 +69,10 @@ const navGroups: { label: string; items: { to: string; label: string; icon: Luci
   },
   {
     label: "System",
-      items: [{ to: "/admin/settings", label: "Settings", icon: Settings2 }],
+      items: [
+        { to: "/admin/legal", label: "Legal Pages", icon: Scale },
+        { to: "/admin/settings", label: "Settings", icon: Settings2 },
+      ],
   },
 ];
 

@@ -21,6 +21,7 @@ import {
 } from "@db/schema";
 import { eq, and, desc, asc, or, ilike, gte, lte, inArray, ne, sql, isNotNull, type SQL } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { readLegalPages } from "./lib/legal";
 
 const listInput = z.object({
   q: z.string().optional(),
@@ -552,4 +553,15 @@ export const shopRouter = createRouter({
     return post ?? null;
   }),
   blogCategories: publicQuery.query(() => getDb().select().from(blogCategories)),
+
+  // ===== Legal pages (public) =====
+  legalPages: publicQuery.query(async () =>
+    (await readLegalPages())
+      .filter((p) => p.enabled && p.title.trim())
+      .map((p) => ({ slug: p.slug, title: p.title, type: p.type, updatedAt: p.updatedAt })),
+  ),
+  legalBySlug: publicQuery.input(z.object({ slug: z.string() })).query(async ({ input }) => {
+    const page = (await readLegalPages()).find((p) => p.slug === input.slug && p.enabled);
+    return page ?? null;
+  }),
 });

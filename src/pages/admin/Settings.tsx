@@ -784,6 +784,9 @@ export default function Settings() {
 
             <div className="space-y-2">
               <Label>Links</Label>
+              <p className="text-[10px] text-[var(--text-2)]">
+                Links to /legal/… pages are managed automatically from Legal Pages (System → Legal Pages).
+              </p>
               {footerLegal.links.map((l, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <Input

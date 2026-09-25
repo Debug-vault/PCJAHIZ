@@ -1,6 +1,9 @@
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { createRouter, adminQuery } from "./middleware";
 import { aiGenerateJson, delay } from "./lib/ai";
+import { getDb } from "./queries/connection";
+import { settings } from "@db/schema";
 
 const SYSTEM_FR = `Tu es un expert e-commerce spécialisé dans la vente de matériel informatique et électronique au Maroc.
 Tu écris toujours en français professionnel, orienté SEO, pour la marque "PC Jahiz".
@@ -191,6 +194,22 @@ const generateSiteModeInput = z.object({
   storeName: z.string().optional(),
   hint: z.string().optional(),
 });
+
+const generateLegalInput = z.object({
+  type: z.enum(["mentions-legales", "cgv", "confidentialite", "cookies", "livraison-retours", "garantie", "custom"]),
+  customTitle: z.string().optional(),
+  hint: z.string().optional(),
+});
+
+async function readSettingAny(key: string): Promise<unknown> {
+  const rows = await getDb().select({ value: settings.value }).from(settings).where(eq(settings.key, key));
+  const v = rows[0]?.value;
+  if (v && typeof v === "object" && "value" in v) {
+    const inner = (v as { value: unknown }).value;
+    return inner ?? null;
+  }
+  return v ?? null;
+}
 
 // ===== Router =====
 export const aiRouter = createRouter({
@@ -544,6 +563,111 @@ Retourne un JSON avec exactement ces champs:
 - emailPlaceholderEn: placeholder du champ email en anglais (ex: "Enter your email address")
 
 Ton: moderne, premium, orienté marque. Le français doit être naturel (pas de traduction littérale de l'anglais).`,
+      );
+
+      return result;
+    }),
+
+  /** Generate a legal page (French HTML) tailored to Moroccan e-commerce law */
+  generateLegalPage: adminQuery
+    .input(generateLegalInput)
+    .mutation(async ({ input }) => {
+      const [nameRaw, contactRaw, footerRaw] = await Promise.all([
+        readSettingAny("storeName"),
+        readSettingAny("contactEmail"),
+        readSettingAny("footerLegal"),
+      ]);
+      const storeName = typeof nameRaw === "string" && nameRaw.trim() ? nameRaw.trim() : "PC Jahiz";
+      const contactEmail = typeof contactRaw === "string" && contactRaw.trim() ? contactRaw.trim() : "contact@pcjahiz.ma";
+      const legalIds =
+        footerRaw && typeof footerRaw === "object" && typeof (footerRaw as { legalText?: unknown }).legalText === "string"
+          ? String((footerRaw as { legalText: string }).legalText)
+          : "";
+
+      const specs: Record<string, string> = {
+        "mentions-legales": `Sections attendues:
+1. Éditeur du site (raison sociale, forme juridique, adresse du siège, contact: téléphone/email fournis)
+2. Identifiants d'entreprise (reprends EXACTEMENT ces identifiants s'ils sont fournis: ${legalIds || "[à compléter]"})
+3. Directeur de la publication
+4. Hébergement du site (indique "Hébergeur: [à compléter]" si non fourni)
+5. Propriété intellectuelle (contenus, marque PC Jahiz, photos)
+6. Données personnelles (renvoi vers la politique de confidentialité)
+7. Droit applicable — juridictions marocaines`,
+        cgv: `Sections attendues:
+1. Objet et champ d'application
+2. Commande (processus de commande en ligne, validation, confirmation)
+3. Prix et paiement (dirhams MAD, carte bancaire/CMI, virement, espèces à la livraison, chèque — ces moyens sont ceux de PC Jahiz)
+4. Livraison (tout le Maroc, délais 24-48h, frais, retrait en magasin)
+5. Rétractation et retours (7 jours conformément à la loi 31-08 protection du consommateur, conditions, remboursement)
+6. Garanties (garantie légale de conformité, garanties constructeur)
+7. Service après-vente
+8. Responsabilité et force majeure
+9. Litiges et droit applicable — loi marocaine, tribunaux compétents (siège de Témara/Casablanca)`,
+        confidentialite: `Sections attendues:
+1. Responsable du traitement (PC Jahiz + contact)
+2. Données collectées (identité, coordonnées de livraison, historique de commandes — jamais de numéro de carte conservé, paiement traité par CMI/Attijariwafa Pay)
+3. Finalités (exécution de la commande, livraison, SAV, newsletter avec consentement)
+4. Base légale et consentement
+5. Durée de conservation
+6. Destinataires (transporteurs, prestataire de paiement, autorités si obligation légale)
+7. Droits d'accès, rectification et opposition — conformément à la loi 09-08 relative à la protection des personnes physiques à l'égard du traitement des données à caractère personnel (CNDP), avec mention de la procédure auprès de la CNDP
+8. Sécurité des données
+9. Cookies (renvoi vers la politique de cookies)
+10. Contact et modifications`,
+        cookies: `Sections attendues:
+1. Qu'est-ce qu'un cookie
+2. Cookies utilisés (essentiels au fonctionnement du site, panier, session; mesure d'audience si activée; réseaux sociaux)
+3. Finalités de chaque catégorie
+4. Durée de vie
+5. Gestion des cookies (paramètres du navigateur, modification du consentement)
+6. Conséquences de la désactivation
+7. Contact`,
+        "livraison-retours": `Sections attendues:
+1. Zones de livraison (tout le Maroc)
+2. Délais de livraison (24-48h principales villes, 48-72h zones éloignées)
+3. Frais de livraison (gratuit au-delà d'un seuil si applicable, sinon [à compléter])
+4. Suivi de commande
+5. Réception et vérification (colis, réserves en cas de dommage)
+6. Retours sous 7 jours (conditions, état du produit, procédure, remboursement sous 14 jours)
+7. Échanges
+8. Produits défectueux — SAV et garantie
+9. Contact support`,
+        garantie: `Sections attendues:
+1. Garantie légale de conformité (loi 31-08)
+2. Garanties constructeur (durées selon produit: PC, composants, téléphones — précise que la durée varie selon le fabricant)
+3. Conditions d'activation de la garantie (facture d'achat PC Jahiz, numéro de série)
+4. Exclusions (dommages accidentels, ouverture/Modification non autorisée, usure normale)
+5. Procédure de prise en charge (contact SAV, diagnostic, réparation/remplacement)
+6. Retour transport en garantie (prise en charge selon le cas)
+7. Service après-vente et pièces détachées
+8. Contact SAV`,
+        custom: `Structure libre mais professionnelle: introduction puis sections H2 logiques, listes à puces quand pertinent.`,
+      };
+
+      const result = await generate<{ title: string; content: string }>(
+        `Tu es un juriste e-commerce marocain rédigeant les mentions et pages légales de "${storeName}", une boutique en ligne de matériel informatique et électronique au Maroc.
+Tu rédiges un français juridique clair, professionnel et accessible, conforme au droit marocain (Code de commerce, loi 31-08 sur la protection du consommateur, loi 09-08 sur les données personnelles / CNDP).
+Réponds TOUJOURS avec du JSON valide, sans texte avant ou après.
+IMPORTANT: Le JSON doit être strictement valide — pas de virgules finales, pas de commentaires, pas de texte hors du JSON. Chaque chaîne doit être correctement échappée (les retours à la ligne du HTML doivent être \\n).`,
+        `Rédige la page légale suivante pour ${storeName} (e-commerce informatique au Maroc).
+
+Type de page: ${input.type}
+${input.customTitle ? `Titre souhaité: ${input.customTitle}` : ""}
+Contact: ${contactEmail}
+Identifiants entreprise: ${legalIds || "non fournis"}
+${input.hint ? `Informations complémentaires fournies par l'administrateur: ${input.hint}` : ""}
+
+${specs[input.type] ?? specs.custom}
+
+Règles:
+- Écris le contenu destiné à être publié tel quel sur le site.
+- Utilise des informations réelles fournies ci-dessus. Pour toute donnée factuelle manquante (adresse exacte, numéro RCC détaillé, nom de l'hébergeur…), écris [à compléter] — n'invente JAMAIS de numéros d'entreprise ou d'adresses.
+- Mentionne ${storeName} naturellement dans le texte.
+- 600 à 1200 mots.
+
+Retourne un JSON avec exactement ces champs:
+- title: titre de la page en français (ex: "Mentions légales")
+- content: le corps de la page en HTML propre — balises autorisées uniquement: <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <a>. PAS de <h1> (le titre est affiché par la page), PAS de markdown, PAS de <html>/<head>/<body>, PAS de scripts ou styles.`,
       );
 
       return result;
