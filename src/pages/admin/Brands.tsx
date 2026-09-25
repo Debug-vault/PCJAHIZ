@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Loader2, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Sparkles, Upload, X } from "lucide-react";
+import { toast } from "sonner";
 import { trpc } from "@/providers/trpc";
 import { cn } from "@/lib/utils";
+import { uploadImage } from "@/lib/hero";
 import type { AppRouter } from "../../../api/router";
 import type { inferRouterOutputs } from "@trpc/server";
 import { Button } from "@/components/ui/button";
@@ -29,8 +31,31 @@ function BrandForm({ initial, onClose }: { initial: Brand | null; onClose: () =>
   }));
   const [error, setError] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const generateSeo = trpc.ai.generateSeo.useMutation();
   const set = (k: string, v: unknown) => setF((s) => ({ ...s, [k]: v }));
+
+  const handleLogoFile = async (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be under 2 MB.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const url = await uploadImage(file);
+      set("logo", url);
+      toast.success("Logo uploaded");
+    } catch {
+      toast.error("Upload failed — try again or paste a URL.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleAiSeo = async () => {
     const name = f.name.trim();
@@ -87,7 +112,41 @@ function BrandForm({ initial, onClose }: { initial: Brand | null; onClose: () =>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5"><Label>Slug</Label><Input value={f.slug} onChange={(e) => set("slug", e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Name</Label><Input value={f.name} onChange={(e) => set("name", e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Logo (URL)</Label><Input value={f.logo} onChange={(e) => set("logo", e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Logo</Label>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[var(--line-strong)] px-4 py-2.5 text-sm text-[var(--text-2)] transition-colors hover:border-[var(--gold-hot)] hover:text-[var(--gold)]">
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {uploading ? "Uploading…" : "Upload image"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={(e) => {
+                      void handleLogoFile(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <span className="text-[11px] text-[var(--text-2)]">PNG, JPG, SVG or WebP — max 2 MB</span>
+              </div>
+              <Input value={f.logo} onChange={(e) => set("logo", e.target.value)} placeholder="…or paste an image URL" />
+              {f.logo && (
+                <div className="flex items-center gap-3">
+                  <img src={f.logo} alt="Logo preview" className="h-16 w-auto rounded-lg border border-[var(--line)] bg-white object-contain p-1" />
+                  <button
+                    type="button"
+                    onClick={() => set("logo", "")}
+                    className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] px-2 py-1 text-xs text-[var(--text-2)] transition hover:border-[var(--alert)] hover:text-[var(--alert)]"
+                  >
+                    <X className="h-3.5 w-3.5" /> Remove
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
           <div className="space-y-1.5"><Label>Order</Label><Input type="number" value={f.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} /></div>
           <div className="space-y-1.5"><Label>Description</Label><Textarea value={f.description} onChange={(e) => set("description", e.target.value)} /></div>
           <div className="space-y-1.5"><Label>SEO title</Label><Input value={f.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} /></div>
