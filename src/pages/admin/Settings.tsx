@@ -5,7 +5,7 @@ import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEFAULT_HEADER, DEFAULT_SETTINGS, type HeaderConfig, type HeaderSliderDirection, type SiteModeConfig } from "@/lib/settings";
+import { DEFAULT_HEADER, DEFAULT_SETTINGS, type HeaderConfig, type HeaderSliderDirection, type SiteModeConfig, type FooterPaymentsConfig, type FooterLegalConfig } from "@/lib/settings";
 import { HeaderEditor } from "@/pages/admin/header-settings";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -83,6 +83,8 @@ export default function Settings() {
   const [homeBrands, setHomeBrands] = useState(DEFAULT_SETTINGS.homeBrandsMarquee);
   const [sectionMaxWidths, setSectionMaxWidths] = useState(DEFAULT_SETTINGS.sectionMaxWidths);
   const [productWatermark, setProductWatermark] = useState(DEFAULT_SETTINGS.productWatermark);
+  const [footerPayments, setFooterPayments] = useState<FooterPaymentsConfig>(DEFAULT_SETTINGS.footerPayments);
+  const [footerLegal, setFooterLegal] = useState<FooterLegalConfig>(DEFAULT_SETTINGS.footerLegal);
   const [siteMode, setSiteMode] = useState<SiteModeConfig>(DEFAULT_SETTINGS.siteMode);
   const [siteModeLang, setSiteModeLang] = useState<"fr" | "en">("fr");
   const generateSiteMode = trpc.ai.generateSiteMode.useMutation();
@@ -324,6 +326,53 @@ export default function Settings() {
         }
         continue;
       }
+      if (row.key === "footerPayments") {
+        const rawFp = unwrap(row.value) as Record<string, unknown> | null;
+        const o = (rawFp && typeof rawFp === "object" && "value" in rawFp && rawFp.value !== null && typeof rawFp.value === "object" ? rawFp.value : rawFp) as Record<string, unknown> | null;
+        if (o && typeof o === "object") {
+          const d = DEFAULT_SETTINGS.footerPayments;
+          const items = Array.isArray(o.items)
+            ? (o.items as Record<string, unknown>[])
+                .filter((it) => it && typeof it === "object")
+                .map((it, i) => ({
+                  id: typeof it.id === "string" && it.id ? it.id : `pay-${i}`,
+                  icon: typeof it.icon === "string" && it.icon ? it.icon : "CreditCard",
+                  title: typeof it.title === "string" ? it.title : "",
+                  desc: typeof it.desc === "string" ? it.desc : "",
+                  cards: Array.isArray(it.cards) ? it.cards.filter((c): c is string => typeof c === "string") : [],
+                  enabled: typeof it.enabled === "boolean" ? it.enabled : true,
+                }))
+            : d.items;
+          setFooterPayments({
+            enabled: typeof o.enabled === "boolean" ? o.enabled : d.enabled,
+            title: typeof o.title === "string" ? o.title : d.title,
+            items,
+          });
+        }
+        continue;
+      }
+      if (row.key === "footerLegal") {
+        const rawFl = unwrap(row.value) as Record<string, unknown> | null;
+        const o = (rawFl && typeof rawFl === "object" && "value" in rawFl && rawFl.value !== null && typeof rawFl.value === "object" ? rawFl.value : rawFl) as Record<string, unknown> | null;
+        if (o && typeof o === "object") {
+          const d = DEFAULT_SETTINGS.footerLegal;
+          const links = Array.isArray(o.links)
+            ? (o.links as Record<string, unknown>[])
+                .filter((it) => it && typeof it === "object")
+                .map((it) => ({
+                  label: typeof it.label === "string" ? it.label : "",
+                  url: typeof it.url === "string" ? it.url : "#",
+                }))
+            : d.links;
+          setFooterLegal({
+            enabled: typeof o.enabled === "boolean" ? o.enabled : d.enabled,
+            legalText: typeof o.legalText === "string" ? o.legalText : d.legalText,
+            rightsText: typeof o.rightsText === "string" ? o.rightsText : d.rightsText,
+            links,
+          });
+        }
+        continue;
+      }
       if (row.key === "siteMode") {
         const rawSm = unwrap(row.value) as Record<string, unknown> | null;
         const o = (rawSm && typeof rawSm === "object" && "value" in rawSm && rawSm.value !== null && typeof rawSm.value === "object" ? rawSm.value : rawSm) as Record<string, unknown> | null;
@@ -417,6 +466,8 @@ export default function Settings() {
         homeTrust: { value: homeTrust },
         sectionMaxWidths: { value: sectionMaxWidths },
         productWatermark: { value: productWatermark },
+        footerPayments: { value: footerPayments },
+        footerLegal: { value: footerLegal },
         siteMode: { value: siteMode },
         headerConfig: { value: header },
         openCodeZenApiKey: { value: values.openCodeZenApiKey },
@@ -597,6 +648,181 @@ export default function Settings() {
                 </div>
               </>
             )}
+          </div>
+
+          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-hud text-sm font-bold">Payment methods (footer)</h3>
+                <p className="text-xs text-[var(--text-2)]">The "Paiement 100 % sécurisé" cards shown above the footer legal bar.</p>
+              </div>
+              <label className="flex shrink-0 items-center gap-2 text-sm">
+                <input type="checkbox" checked={footerPayments.enabled} onChange={(e) => setFooterPayments((s) => ({ ...s, enabled: e.target.checked }))} className="accent-[var(--gold)]" />
+                Visible
+              </label>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Section title</Label>
+              <Input value={footerPayments.title} onChange={(e) => setFooterPayments((s) => ({ ...s, title: e.target.value }))} placeholder="Paiement 100 % sécurisé" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Methods</Label>
+              {footerPayments.items.map((it, i) => (
+                <div key={it.id} className="rounded-lg border border-[var(--line)] bg-[var(--page)] p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={it.icon}
+                      onChange={(e) => setFooterPayments((s) => {
+                        const items = [...s.items];
+                        items[i] = { ...items[i], icon: e.target.value };
+                        return { ...s, items };
+                      })}
+                      className="w-36 rounded-md border border-[var(--line)] bg-[var(--page-soft)] px-2 py-1.5 text-sm"
+                    >
+                      <option value="CreditCard">Credit card</option>
+                      <option value="Banknote">Banknote</option>
+                      <option value="Wallet">Wallet</option>
+                      <option value="Landmark">Landmark (bank)</option>
+                      <option value="Coins">Coins (cash)</option>
+                      <option value="Building2">Building</option>
+                      <option value="Check">Check mark</option>
+                      <option value="Smartphone">Smartphone</option>
+                      <option value="ShieldCheck">Shield (secure)</option>
+                      <option value="Truck">Truck (delivery)</option>
+                    </select>
+                    <Input
+                      value={it.title}
+                      onChange={(e) => setFooterPayments((s) => {
+                        const items = [...s.items];
+                        items[i] = { ...items[i], title: e.target.value };
+                        return { ...s, items };
+                      })}
+                      placeholder="Title"
+                      className="flex-1"
+                    />
+                    <label className="flex shrink-0 items-center gap-1.5 text-xs">
+                      <input type="checkbox" checked={it.enabled} onChange={(e) => setFooterPayments((s) => {
+                        const items = [...s.items];
+                        items[i] = { ...items[i], enabled: e.target.checked };
+                        return { ...s, items };
+                      })} className="accent-[var(--gold)]" />
+                      On
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setFooterPayments((s) => ({ ...s, items: s.items.filter((_, idx) => idx !== i) }))}
+                      className="rounded p-1 text-[var(--text-2)] hover:bg-red-100 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <textarea
+                    value={it.desc}
+                    onChange={(e) => setFooterPayments((s) => {
+                      const items = [...s.items];
+                      items[i] = { ...items[i], desc: e.target.value };
+                      return { ...s, items };
+                    })}
+                    rows={2}
+                    className="w-full rounded-md border border-[var(--line)] bg-[var(--page-soft)] px-3 py-2 text-sm"
+                    placeholder="Description"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Label className="mb-0 shrink-0 text-[10px]">Badges</Label>
+                    <Input
+                      value={it.cards.join(", ")}
+                      onChange={(e) => setFooterPayments((s) => {
+                        const items = [...s.items];
+                        items[i] = { ...items[i], cards: e.target.value.split(",").map((c) => c.trim()) };
+                        return { ...s, items };
+                      })}
+                      placeholder="VISA, MC, CMI (comma separated — leave empty for none)"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setFooterPayments((s) => ({ ...s, items: [...s.items, { id: `pay-${Date.now()}`, icon: "CreditCard", title: "New method", desc: "", cards: [], enabled: true }] }))}
+                className="flex items-center gap-1.5 rounded-lg border border-dashed border-[var(--line)] px-3 py-2 text-xs font-medium text-[var(--text-2)] hover:border-[var(--gold)] hover:text-[var(--gold)]"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add method
+              </button>
+            </div>
+          </div>
+
+          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-hud text-sm font-bold">Legal bar (footer bottom)</h3>
+                <p className="text-xs text-[var(--text-2)]">Company registration numbers and footer links.</p>
+              </div>
+              <label className="flex shrink-0 items-center gap-2 text-sm">
+                <input type="checkbox" checked={footerLegal.enabled} onChange={(e) => setFooterLegal((s) => ({ ...s, enabled: e.target.checked }))} className="accent-[var(--gold)]" />
+                Visible
+              </label>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Legal text (RC · IF · ICE · TP · CNSS)</Label>
+              <textarea
+                value={footerLegal.legalText}
+                onChange={(e) => setFooterLegal((s) => ({ ...s, legalText: e.target.value }))}
+                rows={2}
+                className="w-full rounded-md border border-[var(--line)] bg-[var(--page)] px-3 py-2 text-sm"
+                placeholder="RC … · IF … · ICE … · TP … · CNSS …"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Rights text (after © year — store name)</Label>
+              <Input value={footerLegal.rightsText} onChange={(e) => setFooterLegal((s) => ({ ...s, rightsText: e.target.value }))} placeholder="Tous droits réservés." />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Links</Label>
+              {footerLegal.links.map((l, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Input
+                    value={l.label}
+                    onChange={(e) => setFooterLegal((s) => {
+                      const links = [...s.links];
+                      links[i] = { ...links[i], label: e.target.value };
+                      return { ...s, links };
+                    })}
+                    placeholder="Label"
+                    className="w-44"
+                  />
+                  <Input
+                    value={l.url}
+                    onChange={(e) => setFooterLegal((s) => {
+                      const links = [...s.links];
+                      links[i] = { ...links[i], url: e.target.value };
+                      return { ...s, links };
+                    })}
+                    placeholder="/legal or https://… or #"
+                    className="flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFooterLegal((s) => ({ ...s, links: s.links.filter((_, idx) => idx !== i) }))}
+                    className="rounded p-1 text-[var(--text-2)] hover:bg-red-100 hover:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setFooterLegal((s) => ({ ...s, links: [...s.links, { label: "", url: "#" }] }))}
+                className="flex items-center gap-1.5 rounded-lg border border-dashed border-[var(--line)] px-3 py-2 text-xs font-medium text-[var(--text-2)] hover:border-[var(--gold)] hover:text-[var(--gold)]"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add link
+              </button>
+            </div>
           </div>
         </TabsContent>
 

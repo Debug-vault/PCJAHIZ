@@ -65,6 +65,28 @@ export type HeaderConfig = {
   mobileDrawer: { showSearch: boolean; showPhone: boolean; showAccount: boolean; showCompare: boolean; showCart: boolean };
 };
 
+export type FooterPaymentItem = {
+  id: string;
+  icon: string;
+  title: string;
+  desc: string;
+  cards: string[];
+  enabled: boolean;
+};
+
+export type FooterPaymentsConfig = {
+  enabled: boolean;
+  title: string;
+  items: FooterPaymentItem[];
+};
+
+export type FooterLegalConfig = {
+  enabled: boolean;
+  legalText: string;
+  rightsText: string;
+  links: { label: string; url: string }[];
+};
+
 export type SiteModeConfig = {
   enabled: boolean;
   mode: "coming-soon" | "maintenance";
@@ -133,6 +155,8 @@ export type StoreSettings = {
   taxRate: { rate: number } | null;
   productWatermark: { enabled: boolean; opacity: number; size: number; logo: string | null; urlText: string; textColor: string; fontSize: number };
   header: HeaderConfig;
+  footerPayments: FooterPaymentsConfig;
+  footerLegal: FooterLegalConfig;
   siteMode: SiteModeConfig;
 };
 
@@ -252,6 +276,54 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   taxRate: { rate: 20 },
   productWatermark: { enabled: true, opacity: 5, size: 200, logo: null, urlText: "PCJahiz.ma", textColor: "#facc15", fontSize: 14 },
   header: DEFAULT_HEADER,
+  footerPayments: {
+    enabled: true,
+    title: "Paiement 100 % sécurisé",
+    items: [
+      {
+        id: "pay-cb",
+        icon: "CreditCard",
+        title: "Carte bancaire",
+        desc: "Marocaine ou étrangère — Visa, Mastercard, CMI. Paiement 3-D sécurisé via Attijariwafa Pay : aucun numéro de carte n'est conservé.",
+        cards: ["VISA", "MC", "CMI"],
+        enabled: true,
+      },
+      {
+        id: "pay-wire",
+        icon: "Banknote",
+        title: "Virement bancaire",
+        desc: "Instantané ou classique, sur notre compte Attijariwafa bank. Commande validée dès réception des fonds.",
+        cards: [],
+        enabled: true,
+      },
+      {
+        id: "pay-cash",
+        icon: "Wallet",
+        title: "Espèces",
+        desc: "À la livraison, au comptoir lors du retrait en magasin, ou en versement dans une agence bancaire.",
+        cards: [],
+        enabled: true,
+      },
+      {
+        id: "pay-check",
+        icon: "Banknote",
+        title: "Chèque",
+        desc: "À fonds de digiRIZ e — certifié au débit d'un certain montant. Une copie par WhatsApp suffit à lancer l'expédition.",
+        cards: [],
+        enabled: true,
+      },
+    ],
+  },
+  footerLegal: {
+    enabled: true,
+    legalText: "RC 135926/Témara · IF 33901539 · ICE 001542823000046 · TP 27967074 · CNSS 7536438",
+    rightsText: "Tous droits réservés.",
+    links: [
+      { label: "Mentions légales", url: "#" },
+      { label: "CGV", url: "#" },
+      { label: "Confidentialité", url: "#" },
+    ],
+  },
   siteMode: {
     enabled: false,
     mode: "coming-soon",
@@ -475,6 +547,49 @@ export function normalizeSettings(raw: Record<string, unknown> | undefined): Sto
       };
     })(),
     header: readHeader(raw),
+    footerPayments: (() => {
+      const rawFp = raw.footerPayments as Record<string, unknown> | undefined;
+      const o = (rawFp && typeof rawFp === "object" && "value" in rawFp && rawFp.value !== null && typeof rawFp.value === "object" ? rawFp.value : rawFp) as Record<string, unknown> | undefined;
+      const d = DEFAULT_SETTINGS.footerPayments;
+      if (!o || typeof o !== "object") return d;
+      const items = Array.isArray(o.items)
+        ? (o.items as Record<string, unknown>[])
+            .filter((it) => it && typeof it === "object")
+            .map((it, i) => ({
+              id: typeof it.id === "string" && it.id ? it.id : `pay-${i}`,
+              icon: typeof it.icon === "string" && it.icon ? it.icon : "CreditCard",
+              title: typeof it.title === "string" ? it.title : "",
+              desc: typeof it.desc === "string" ? it.desc : "",
+              cards: Array.isArray(it.cards) ? it.cards.filter((c): c is string => typeof c === "string") : [],
+              enabled: readBool(it.enabled, true),
+            }))
+        : d.items;
+      return {
+        enabled: readBool(o.enabled, d.enabled),
+        title: readStr(o.title, d.title),
+        items,
+      };
+    })(),
+    footerLegal: (() => {
+      const rawFl = raw.footerLegal as Record<string, unknown> | undefined;
+      const o = (rawFl && typeof rawFl === "object" && "value" in rawFl && rawFl.value !== null && typeof rawFl.value === "object" ? rawFl.value : rawFl) as Record<string, unknown> | undefined;
+      const d = DEFAULT_SETTINGS.footerLegal;
+      if (!o || typeof o !== "object") return d;
+      const links = Array.isArray(o.links)
+        ? (o.links as Record<string, unknown>[])
+            .filter((it) => it && typeof it === "object")
+            .map((it) => ({
+              label: typeof it.label === "string" ? it.label : "",
+              url: typeof it.url === "string" ? it.url : "#",
+            }))
+        : d.links;
+      return {
+        enabled: readBool(o.enabled, d.enabled),
+        legalText: readStr(o.legalText, d.legalText),
+        rightsText: readStr(o.rightsText, d.rightsText),
+        links,
+      };
+    })(),
     siteMode: (() => {
       const raw2 = raw.siteMode as Record<string, unknown> | undefined;
       const o = (raw2 && typeof raw2 === "object" && "value" in raw2 && raw2.value !== null && typeof raw2.value === "object" ? raw2.value : raw2) as Record<string, unknown> | undefined;

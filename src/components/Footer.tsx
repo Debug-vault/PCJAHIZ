@@ -1,7 +1,15 @@
 import { Link } from "react-router";
-import { Facebook, Instagram, Youtube, Linkedin, MessageCircle, Phone, Mail, MapPin, ExternalLink, CreditCard, Banknote, BanknoteIcon, Wallet } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Facebook, Instagram, Youtube, Linkedin, MessageCircle, Phone, Mail, MapPin, ExternalLink,
+  CreditCard, Banknote, BanknoteIcon, Wallet, Landmark, Coins, Building2, Check, Smartphone, ShieldCheck, Truck,
+} from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useStoreSettings } from "@/lib/settings";
+
+const PAY_ICON_MAP: Record<string, LucideIcon> = {
+  CreditCard, Banknote, BanknoteIcon, Wallet, Landmark, Coins, Building2, Check, Smartphone, ShieldCheck, Truck,
+};
 
 export function Footer() {
   const { t } = useI18n();
@@ -180,47 +188,52 @@ export function Footer() {
       </div>
 
       {/* Payment */}
-      <div className="border-b border-white/10">
-        <div className="mx-auto max-w-[var(--section-footer-max-width)] px-6 py-10 sm:px-8">
-          <h3 className="mb-5 font-hud text-sm font-bold uppercase tracking-wider text-white">{t("footer.paymentTitle")}</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: CreditCard, title: t("footer.paymentCbTitle"), desc: t("footer.paymentCbDesc"), cards: ["VISA", "MC", "CMI"] },
-              { icon: Banknote, title: t("footer.paymentWireTitle"), desc: t("footer.paymentWireDesc") },
-              { icon: Wallet, title: t("footer.paymentCashTitle"), desc: t("footer.paymentCashDesc") },
-              { icon: BanknoteIcon, title: t("footer.paymentCheckTitle"), desc: t("footer.paymentCheckDesc") },
-            ].map((method) => (
-              <div key={method.title} className="rounded-xl border border-white/10 bg-white/5 p-5">
-                <div className="mb-2 flex items-center gap-2">
-                  <method.icon className="h-4 w-4 text-[var(--gold)]" />
-                  <span className="font-hud text-xs font-bold uppercase tracking-wider text-white">{method.title}</span>
-                </div>
-                <p className="text-xs leading-relaxed text-white/50">{method.desc}</p>
-                {method.cards ? (
-                  <div className="mt-3 flex gap-2">
-                    {method.cards.map((c) => (
-                      <span key={c} className="rounded bg-white/10 px-2 py-0.5 font-mono text-[10px] font-bold text-white/70">{c}</span>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ))}
+      {settings.footerPayments.enabled && settings.footerPayments.items.filter((it) => it.enabled && it.title.trim()).length > 0 && (
+        <div className="border-b border-white/10">
+          <div className="mx-auto max-w-[var(--section-footer-max-width)] px-6 py-10 sm:px-8">
+            <h3 className="mb-5 font-hud text-sm font-bold uppercase tracking-wider text-white">{settings.footerPayments.title}</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {settings.footerPayments.items
+                .filter((it) => it.enabled && it.title.trim())
+                .map((method) => {
+                  const Icon = PAY_ICON_MAP[method.icon] ?? CreditCard;
+                  const badges = method.cards.filter(Boolean);
+                  return (
+                    <div key={method.id} className="rounded-xl border border-white/10 bg-white/5 p-5">
+                      <div className="mb-2 flex items-center gap-2">
+                        <Icon className="h-4 w-4 text-[var(--gold)]" />
+                        <span className="font-hud text-xs font-bold uppercase tracking-wider text-white">{method.title}</span>
+                      </div>
+                      <p className="text-xs leading-relaxed text-white/50">{method.desc}</p>
+                      {badges.length > 0 ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {badges.map((c) => (
+                            <span key={c} className="rounded bg-white/10 px-2 py-0.5 font-mono text-[10px] font-bold text-white/70">{c}</span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Legal */}
-      <div className="py-5">
-        <div className="mx-auto flex max-w-[var(--section-footer-max-width)] flex-col items-center justify-between gap-3 px-6 text-center text-xs text-white/40 sm:flex-row sm:px-8 sm:text-left">
-          <p>{t("footer.legal")}</p>
-          <div className="flex flex-wrap items-center gap-4">
-            <a href="#" className="transition-colors hover:text-white">{t("footer.mentions")}</a>
-            <a href="#" className="transition-colors hover:text-white">{t("footer.cgv")}</a>
-            <a href="#" className="transition-colors hover:text-white">{t("footer.privacy")}</a>
-            <span>© {new Date().getFullYear()} {settings.storeName}. {t("footer.rights")}</span>
+      {settings.footerLegal.enabled && (
+        <div className="py-5">
+          <div className="mx-auto flex max-w-[var(--section-footer-max-width)] flex-col items-center justify-between gap-3 px-6 text-center text-xs text-white/40 sm:flex-row sm:px-8 sm:text-left">
+            <p>{settings.footerLegal.legalText}</p>
+            <div className="flex flex-wrap items-center gap-4">
+              {settings.footerLegal.links.filter((l) => l.label.trim()).map((l) => (
+                <a key={l.label} href={l.url || "#"} className="transition-colors hover:text-white">{l.label}</a>
+              ))}
+              <span>© {new Date().getFullYear()} {settings.storeName}. {settings.footerLegal.rightsText}</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </footer>
   );
 }
