@@ -782,23 +782,25 @@ export function Navbar() {
         </div>
       ) : null}
 
-      <div className="hidden border-b border-[var(--line)] bg-[var(--page)] md:block">
-        <div className="mx-auto flex h-8 max-w-[var(--section-header-max-width)] items-center gap-6 px-4 text-[11px] text-[var(--text-2)] sm:px-6">
-          {h.utilityBar.enabled && utilityItems.map((it) => (
-            <SmartLink
-              key={it.id}
-              item={it}
-              className="inline-flex items-center gap-1.5 transition-colors hover:text-[var(--text-1)]"
-            >
-              <HeaderIcon name={it.icon} className="h-3.5 w-3.5" />
-              {it.text}
-            </SmartLink>
-          ))}
-          <div className="ml-auto">
-            {h.utilityBar.showTaxToggle ? <TaxModeToggle /> : null}
+      {(h.utilityBar.enabled && utilityItems.length > 0) || h.utilityBar.showTaxToggle ? (
+        <div className="hidden border-b border-[var(--line)] bg-[var(--page)] md:block">
+          <div className="mx-auto flex h-8 max-w-[var(--section-header-max-width)] items-center gap-6 px-4 text-[11px] text-[var(--text-2)] sm:px-6">
+            {h.utilityBar.enabled && utilityItems.map((it) => (
+              <SmartLink
+                key={it.id}
+                item={it}
+                className="inline-flex items-center gap-1.5 transition-colors hover:text-[var(--text-1)]"
+              >
+                <HeaderIcon name={it.icon} className="h-3.5 w-3.5" />
+                {it.text}
+              </SmartLink>
+            ))}
+            <div className="ml-auto">
+              {h.utilityBar.showTaxToggle ? <TaxModeToggle /> : null}
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       <header className="border-b border-[var(--line)]" style={{ background: h.mainBar.bg }}>
         <div className="mx-auto flex max-w-[var(--section-header-max-width)] items-center gap-3 px-4 sm:px-6" style={{ height: h.mainBar.height }}>
