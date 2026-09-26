@@ -351,7 +351,7 @@ export function HeaderEditor({
           ) : null}
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Toggle checked={value.mainBar.sticky} onChange={(v) => updMain({ sticky: v })} label="Sticky bar (fixed at top)" />
+          <Toggle checked={value.mainBar.sticky} onChange={(v) => updMain({ sticky: v })} label="Sticky bar — hides on scroll down, returns on scroll up" />
           <div className="flex items-end pb-1">
             <Toggle checked={value.mainBar.search.enabled} onChange={(v) => updMain({ search: { ...value.mainBar.search, enabled: v } })} label="Search enabled" />
           </div>

@@ -655,6 +655,8 @@ export function Navbar() {
     try { return localStorage.getItem("topBarClosed") === "1"; } catch { return false; }
   });
   const { currentSlide: heroSlide } = useHeroSlide();
+  const [headerHidden, setHeaderHidden] = useState(false);
+  const headerScroll = useRef({ lastY: 0, accum: 0 });
 
 
   const topItems = h.topBar.items.filter((it) => it.enabled);
@@ -680,6 +682,37 @@ export function Navbar() {
     document.documentElement.style.setProperty("--nav-h", `${total}px`);
   }, [h, topItems.length, utilityItems.length, bottomItems.length, topCats.length]);
 
+  useEffect(() => {
+    if (!h.mainBar.sticky) return;
+    const s = headerScroll.current;
+    s.lastY = window.scrollY;
+    s.accum = 0;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const delta = y - s.lastY;
+      s.lastY = y;
+      if (y <= 4) {
+        s.accum = 0;
+        setHeaderHidden(false);
+        return;
+      }
+      if (delta !== 0 && Math.sign(delta) !== Math.sign(s.accum)) s.accum = 0;
+      s.accum += delta;
+      if (s.accum <= -30) {
+        s.accum = 0;
+        setHeaderHidden(false);
+        return;
+      }
+      if (searchFocused || megaOpen || menuOpen || mobileOpen) return;
+      if (y > 60 && s.accum >= 80) {
+        s.accum = 0;
+        setHeaderHidden(true);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [h.mainBar.sticky, searchFocused, megaOpen, menuOpen, mobileOpen]);
+
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const q = query.trim();
@@ -693,9 +726,13 @@ export function Navbar() {
   const activeSlide = topItems.length ? topItems[Math.min(slide, topItems.length - 1)] : null;
 
   const closeMobile = () => setMobileOpen(false);
+  const hideStickyHeader = headerHidden && !searchFocused && !megaOpen && !menuOpen && !mobileOpen;
 
   return (
-    <div className={cn("top-0 z-40", h.mainBar.sticky && "sticky")}>
+    <div
+      className={cn("top-0 z-40", h.mainBar.sticky && "sticky transition-transform duration-300 ease-out", h.mainBar.sticky && hideStickyHeader && "-translate-y-full")}
+      onFocus={() => setHeaderHidden(false)}
+    >
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-[var(--gold)] focus:px-4 focus:py-2 focus:font-hud focus:text-sm focus:font-bold focus:text-black"
