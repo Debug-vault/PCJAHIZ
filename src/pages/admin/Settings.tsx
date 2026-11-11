@@ -5,7 +5,7 @@ import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEFAULT_HEADER, DEFAULT_SETTINGS, type HeaderConfig, type HeaderSliderDirection, type SiteModeConfig, type FooterPaymentsConfig, type FooterLegalConfig, type FooterStoreConfig } from "@/lib/settings";
+import { DEFAULT_HEADER, DEFAULT_SETTINGS, normalizeMapEmbedUrl, type HeaderConfig, type HeaderSliderDirection, type SiteModeConfig, type FooterPaymentsConfig, type FooterLegalConfig, type FooterStoreConfig } from "@/lib/settings";
 import { HeaderEditor } from "@/pages/admin/header-settings";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -387,7 +387,7 @@ export default function Settings() {
             address: str(o.address, d.address),
             hours: str(o.hours, d.hours),
             mapUrl: str(o.mapUrl, d.mapUrl),
-            mapEmbedUrl: str(o.mapEmbedUrl, d.mapEmbedUrl),
+            mapEmbedUrl: normalizeMapEmbedUrl(str(o.mapEmbedUrl, d.mapEmbedUrl)),
             showMap: typeof o.showMap === "boolean" ? o.showMap : d.showMap,
           });
         }
@@ -488,7 +488,7 @@ export default function Settings() {
         productWatermark: { value: productWatermark },
         footerPayments: { value: footerPayments },
         footerLegal: { value: footerLegal },
-        footerStore: { value: footerStore },
+        footerStore: { value: { ...footerStore, mapEmbedUrl: normalizeMapEmbedUrl(footerStore.mapEmbedUrl) } },
         siteMode: { value: siteMode },
         headerConfig: { value: header },
         openCodeZenApiKey: { value: values.openCodeZenApiKey },
@@ -706,7 +706,7 @@ export default function Settings() {
             <div className="space-y-1.5">
               <Label>Map embed URL (optional)</Label>
               <Input value={footerStore.mapEmbedUrl} onChange={(e) => setFooterStore((s) => ({ ...s, mapEmbedUrl: e.target.value }))} placeholder="Leave empty to auto-generate from the address" />
-              <p className="text-xs text-[var(--text-2)]">Paste a Google Maps “Embed a map” URL. If empty, the map follows the address above.</p>
+              <p className="text-xs text-[var(--text-2)]">Paste the Google Maps “Embed a map” URL, or the full iframe code (only the src is used). If empty, the map follows the address above.</p>
             </div>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={footerStore.showMap} onChange={(e) => setFooterStore((s) => ({ ...s, showMap: e.target.checked }))} className="accent-[var(--gold)]" />

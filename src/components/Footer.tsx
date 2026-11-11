@@ -5,7 +5,7 @@ import {
   CreditCard, Banknote, BanknoteIcon, Wallet, Landmark, Coins, Building2, Check, Smartphone, ShieldCheck, Truck,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { useStoreSettings } from "@/lib/settings";
+import { useStoreSettings, normalizeMapEmbedUrl } from "@/lib/settings";
 
 const PAY_ICON_MAP: Record<string, LucideIcon> = {
   CreditCard, Banknote, BanknoteIcon, Wallet, Landmark, Coins, Building2, Check, Smartphone, ShieldCheck, Truck,
@@ -20,7 +20,7 @@ export function Footer() {
   const footerBg = h?.bottomNav?.bg || "#1a1a2e";
   const fs = settings.footerStore;
   const mapSrc =
-    fs.mapEmbedUrl.trim() ||
+    normalizeMapEmbedUrl(fs.mapEmbedUrl) ||
     (fs.address.trim() ? `https://www.google.com/maps?q=${encodeURIComponent(fs.address.trim())}&output=embed` : "");
 
   return (

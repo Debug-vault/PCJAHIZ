@@ -99,6 +99,19 @@ export type FooterStoreConfig = {
   showMap: boolean;
 };
 
+/**
+ * Accepts either a plain embed URL or the full `<iframe ...>` code copied
+ * from Google Maps ("Share → Embed a map") and returns just the src URL.
+ * Returns an empty string when no usable URL is found.
+ */
+export function normalizeMapEmbedUrl(input: string | null | undefined): string {
+  const raw = (input ?? "").trim();
+  if (!raw) return "";
+  const iframeSrc = raw.match(/<iframe[^>]*\bsrc\s*=\s*["']([^"']+)["']/i);
+  const candidate = (iframeSrc ? iframeSrc[1] : raw).trim();
+  return /^https?:\/\//i.test(candidate) ? candidate : "";
+}
+
 export type SiteModeConfig = {
   enabled: boolean;
   mode: "coming-soon" | "maintenance";
@@ -625,7 +638,7 @@ export function normalizeSettings(raw: Record<string, unknown> | undefined): Sto
         address: readStr(o.address, d.address),
         hours: readStr(o.hours, d.hours),
         mapUrl: readStr(o.mapUrl, d.mapUrl),
-        mapEmbedUrl: readStr(o.mapEmbedUrl, d.mapEmbedUrl),
+        mapEmbedUrl: normalizeMapEmbedUrl(readStr(o.mapEmbedUrl, d.mapEmbedUrl)),
         showMap: readBool(o.showMap, d.showMap),
       };
     })(),
