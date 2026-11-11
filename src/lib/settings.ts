@@ -87,6 +87,18 @@ export type FooterLegalConfig = {
   links: { label: string; url: string }[];
 };
 
+export type FooterStoreConfig = {
+  enabled: boolean;
+  title: string;
+  storeName: string;
+  address: string;
+  hours: string;
+  mapUrl: string;
+  /** Google Maps iframe src. Leave empty to auto-generate from the address. */
+  mapEmbedUrl: string;
+  showMap: boolean;
+};
+
 export type SiteModeConfig = {
   enabled: boolean;
   mode: "coming-soon" | "maintenance";
@@ -157,6 +169,7 @@ export type StoreSettings = {
   header: HeaderConfig;
   footerPayments: FooterPaymentsConfig;
   footerLegal: FooterLegalConfig;
+  footerStore: FooterStoreConfig;
   siteMode: SiteModeConfig;
 };
 
@@ -323,6 +336,16 @@ export const DEFAULT_SETTINGS: StoreSettings = {
       { label: "CGV", url: "#" },
       { label: "Confidentialité", url: "#" },
     ],
+  },
+  footerStore: {
+    enabled: true,
+    title: "Venez nous voir en magasin",
+    storeName: "Magasin Agadir - Riad Salam",
+    address: "Riad Salam, Agadir",
+    hours: "Lun-Ven 10h-19h · Sam 10h-14h",
+    mapUrl: "https://maps.google.com",
+    mapEmbedUrl: "",
+    showMap: true,
   },
   siteMode: {
     enabled: false,
@@ -588,6 +611,22 @@ export function normalizeSettings(raw: Record<string, unknown> | undefined): Sto
         legalText: readStr(o.legalText, d.legalText),
         rightsText: readStr(o.rightsText, d.rightsText),
         links,
+      };
+    })(),
+    footerStore: (() => {
+      const rawFs = raw.footerStore as Record<string, unknown> | undefined;
+      const o = (rawFs && typeof rawFs === "object" && "value" in rawFs && rawFs.value !== null && typeof rawFs.value === "object" ? rawFs.value : rawFs) as Record<string, unknown> | undefined;
+      const d = DEFAULT_SETTINGS.footerStore;
+      if (!o || typeof o !== "object") return d;
+      return {
+        enabled: readBool(o.enabled, d.enabled),
+        title: readStr(o.title, d.title),
+        storeName: readStr(o.storeName, d.storeName),
+        address: readStr(o.address, d.address),
+        hours: readStr(o.hours, d.hours),
+        mapUrl: readStr(o.mapUrl, d.mapUrl),
+        mapEmbedUrl: readStr(o.mapEmbedUrl, d.mapEmbedUrl),
+        showMap: readBool(o.showMap, d.showMap),
       };
     })(),
     siteMode: (() => {

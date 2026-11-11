@@ -5,7 +5,7 @@ import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEFAULT_HEADER, DEFAULT_SETTINGS, type HeaderConfig, type HeaderSliderDirection, type SiteModeConfig, type FooterPaymentsConfig, type FooterLegalConfig } from "@/lib/settings";
+import { DEFAULT_HEADER, DEFAULT_SETTINGS, type HeaderConfig, type HeaderSliderDirection, type SiteModeConfig, type FooterPaymentsConfig, type FooterLegalConfig, type FooterStoreConfig } from "@/lib/settings";
 import { HeaderEditor } from "@/pages/admin/header-settings";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -85,6 +85,7 @@ export default function Settings() {
   const [productWatermark, setProductWatermark] = useState(DEFAULT_SETTINGS.productWatermark);
   const [footerPayments, setFooterPayments] = useState<FooterPaymentsConfig>(DEFAULT_SETTINGS.footerPayments);
   const [footerLegal, setFooterLegal] = useState<FooterLegalConfig>(DEFAULT_SETTINGS.footerLegal);
+  const [footerStore, setFooterStore] = useState<FooterStoreConfig>(DEFAULT_SETTINGS.footerStore);
   const [siteMode, setSiteMode] = useState<SiteModeConfig>(DEFAULT_SETTINGS.siteMode);
   const [siteModeLang, setSiteModeLang] = useState<"fr" | "en">("fr");
   const generateSiteMode = trpc.ai.generateSiteMode.useMutation();
@@ -373,6 +374,25 @@ export default function Settings() {
         }
         continue;
       }
+      if (row.key === "footerStore") {
+        const rawFs = unwrap(row.value) as Record<string, unknown> | null;
+        const o = (rawFs && typeof rawFs === "object" && "value" in rawFs && rawFs.value !== null && typeof rawFs.value === "object" ? rawFs.value : rawFs) as Record<string, unknown> | null;
+        if (o && typeof o === "object") {
+          const d = DEFAULT_SETTINGS.footerStore;
+          const str = (v: unknown, fb: string) => (typeof v === "string" ? v : fb);
+          setFooterStore({
+            enabled: typeof o.enabled === "boolean" ? o.enabled : d.enabled,
+            title: str(o.title, d.title),
+            storeName: str(o.storeName, d.storeName),
+            address: str(o.address, d.address),
+            hours: str(o.hours, d.hours),
+            mapUrl: str(o.mapUrl, d.mapUrl),
+            mapEmbedUrl: str(o.mapEmbedUrl, d.mapEmbedUrl),
+            showMap: typeof o.showMap === "boolean" ? o.showMap : d.showMap,
+          });
+        }
+        continue;
+      }
       if (row.key === "siteMode") {
         const rawSm = unwrap(row.value) as Record<string, unknown> | null;
         const o = (rawSm && typeof rawSm === "object" && "value" in rawSm && rawSm.value !== null && typeof rawSm.value === "object" ? rawSm.value : rawSm) as Record<string, unknown> | null;
@@ -468,6 +488,7 @@ export default function Settings() {
         productWatermark: { value: productWatermark },
         footerPayments: { value: footerPayments },
         footerLegal: { value: footerLegal },
+        footerStore: { value: footerStore },
         siteMode: { value: siteMode },
         headerConfig: { value: header },
         openCodeZenApiKey: { value: values.openCodeZenApiKey },
@@ -648,6 +669,49 @@ export default function Settings() {
                 </div>
               </>
             )}
+          </div>
+
+          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-hud text-sm font-bold">Store address (footer)</h3>
+                <p className="text-xs text-[var(--text-2)]">The "Venez nous voir en magasin" block and map shown in the footer.</p>
+              </div>
+              <label className="flex shrink-0 items-center gap-2 text-sm">
+                <input type="checkbox" checked={footerStore.enabled} onChange={(e) => setFooterStore((s) => ({ ...s, enabled: e.target.checked }))} className="accent-[var(--gold)]" />
+                Visible
+              </label>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Section title</Label>
+              <Input value={footerStore.title} onChange={(e) => setFooterStore((s) => ({ ...s, title: e.target.value }))} placeholder="Venez nous voir en magasin" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Store name</Label>
+              <Input value={footerStore.storeName} onChange={(e) => setFooterStore((s) => ({ ...s, storeName: e.target.value }))} placeholder="Magasin Agadir - Riad Salam" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Address</Label>
+              <Input value={footerStore.address} onChange={(e) => setFooterStore((s) => ({ ...s, address: e.target.value }))} placeholder="Riad Salam, Agadir" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Opening hours</Label>
+              <Input value={footerStore.hours} onChange={(e) => setFooterStore((s) => ({ ...s, hours: e.target.value }))} placeholder="Lun-Ven 10h-19h · Sam 10h-14h" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Google Maps link</Label>
+              <Input value={footerStore.mapUrl} onChange={(e) => setFooterStore((s) => ({ ...s, mapUrl: e.target.value }))} placeholder="https://maps.google.com/…" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Map embed URL (optional)</Label>
+              <Input value={footerStore.mapEmbedUrl} onChange={(e) => setFooterStore((s) => ({ ...s, mapEmbedUrl: e.target.value }))} placeholder="Leave empty to auto-generate from the address" />
+              <p className="text-xs text-[var(--text-2)]">Paste a Google Maps “Embed a map” URL. If empty, the map follows the address above.</p>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={footerStore.showMap} onChange={(e) => setFooterStore((s) => ({ ...s, showMap: e.target.checked }))} className="accent-[var(--gold)]" />
+              Show map
+            </label>
           </div>
 
           <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-3">

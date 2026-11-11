@@ -2,6 +2,7 @@ import type { Hono, Context } from "hono";
 import { serveStatic } from "@hono/node-server/serve-static";
 import path from "node:path";
 import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 import { buildSeo, seoHead } from "./seo";
 
 function makeSpaHandler(indexHtml: string) {
@@ -43,7 +44,14 @@ function makeSpaHandler(indexHtml: string) {
  * so a stale cached page fails loudly instead of white-screening.
  */
 export function serveStaticFiles(app: Hono<any, any, any>) {
-  const distDir = path.resolve(process.cwd(), "dist/public");
+  // Prefer the build output next to the bundled entry (dist/boot.js -> dist/public),
+  // then fall back to cwd for other launch layouts.
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.join(moduleDir, "public"),
+    path.resolve(process.cwd(), "dist/public"),
+  ];
+  const distDir = candidates.find((dir) => fs.existsSync(path.join(dir, "index.html"))) ?? candidates[1];
   const indexHtml = path.join(distDir, "index.html");
   const spa = makeSpaHandler(indexHtml);
 

@@ -18,13 +18,17 @@ export function Footer() {
   const phoneClean = phone.replace(/[^0-9+]/g, "");
   const h = settings.header;
   const footerBg = h?.bottomNav?.bg || "#1a1a2e";
+  const fs = settings.footerStore;
+  const mapSrc =
+    fs.mapEmbedUrl.trim() ||
+    (fs.address.trim() ? `https://www.google.com/maps?q=${encodeURIComponent(fs.address.trim())}&output=embed` : "");
 
   return (
     <footer className="text-white" style={{ background: footerBg }}>
       {/* Contact + Store */}
       <div className="border-b border-white/10">
         <div className="mx-auto max-w-[var(--section-footer-max-width)] px-6 py-10 sm:px-8">
-          <div className="grid gap-10 md:grid-cols-2">
+          <div className={fs.enabled ? "grid gap-10 md:grid-cols-2" : ""}>
             {/* Contact */}
             <div>
               <h3 className="mb-2 font-hud text-sm font-bold uppercase tracking-wider text-white">{t("footer.contactTitle")}</h3>
@@ -58,27 +62,35 @@ export function Footer() {
             </div>
 
             {/* Store */}
-            <div>
-              <h3 className="mb-2 font-hud text-sm font-bold uppercase tracking-wider text-white">{t("footer.storeTitle")}</h3>
-              <p className="flex items-center gap-1.5 text-sm font-bold text-white"><MapPin className="h-3.5 w-3.5 text-[var(--gold)]" />{t("footer.storeAgadirTitle")}</p>
-              <p className="mt-1 text-sm text-white/60">{t("footer.storeAgadirAddr")}</p>
-              <p className="mt-0.5 text-sm text-white/60">{t("footer.storeAgadirHours")}</p>
-              <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-white/50 hover:text-white">
-                {t("footer.storeMap")} <ExternalLink className="h-3 w-3" />
-              </a>
-              <div className="mt-4 overflow-hidden rounded-lg">
-                <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3440.9481794393946!2d-9.5709428!3d30.409212099999998!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xdb3b7cf55ae0e0d%3A0xb657d0fb841ee7c!2sDigiDis!5e0!3m2!1sen!2sma!4v1787994032116!5m2!1sen!2sma"
-                  width="100%"
-                  height="200"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  title={t("footer.storeAgadirTitle")}
-                />
+            {fs.enabled && (
+              <div>
+                <h3 className="mb-2 font-hud text-sm font-bold uppercase tracking-wider text-white">{fs.title || t("footer.storeTitle")}</h3>
+                {fs.storeName.trim() ? (
+                  <p className="flex items-center gap-1.5 text-sm font-bold text-white"><MapPin className="h-3.5 w-3.5 text-[var(--gold)]" />{fs.storeName}</p>
+                ) : null}
+                {fs.address.trim() ? <p className="mt-1 text-sm text-white/60">{fs.address}</p> : null}
+                {fs.hours.trim() ? <p className="mt-0.5 text-sm text-white/60">{fs.hours}</p> : null}
+                {fs.mapUrl.trim() ? (
+                  <a href={fs.mapUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-white/50 hover:text-white">
+                    {t("footer.storeMap")} <ExternalLink className="h-3 w-3" />
+                  </a>
+                ) : null}
+                {fs.showMap && mapSrc ? (
+                  <div className="mt-4 overflow-hidden rounded-lg">
+                    <iframe
+                      src={mapSrc}
+                      width="100%"
+                      height="200"
+                      style={{ border: 0 }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      title={fs.storeName || t("footer.storeAgadirTitle")}
+                    />
+                  </div>
+                ) : null}
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
