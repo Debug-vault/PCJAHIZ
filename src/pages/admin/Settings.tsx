@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Loader2, Eye, EyeOff, Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Sparkles } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Loader2, Eye, EyeOff, Plus, Trash2, GripVertical, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DEFAULT_HEADER, DEFAULT_SETTINGS, normalizeMapEmbedUrl, type HeaderConfig, type HeaderSliderDirection, type SiteModeConfig, type FooterPaymentsConfig, type FooterLegalConfig, type FooterStoreConfig, type FooterCndpConfig, type FooterCndpStyle } from "@/lib/settings";
 import { HeaderEditor } from "@/pages/admin/header-settings";
+import { SettingsCard } from "@/pages/admin/settings-card";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type TopTab = "boutique" | "marque" | "entete" | "accueil" | "site" | "api";
 type EnteteSection = "topBar" | "utilityBar" | "mainBar" | "slider" | "bottomNav" | "mobileDrawer";
 type AccueilSection = "hero" | "produits" | "marques" | "defilant" | "confiance" | "sections";
+
+const TAB_SECTION_IDS: Record<TopTab, readonly string[]> = {
+  boutique: ["store-details"],
+  marque: ["brand-identity", "watermark", "footer-store", "footer-cndp", "footer-payments", "footer-legal"],
+  entete: [],
+  accueil: [],
+  site: ["site-mode"],
+  api: ["ai-provider"],
+};
+
+const SectionLabel = ({ children }: { children: ReactNode }) => (
+  <h4 className="pt-2 text-[11px] font-bold uppercase tracking-wider text-[var(--text-2)]">{children}</h4>
+);
 
 const DEFAULTS: Record<string, string> = {
   storeName: "PC Jahiz",
@@ -89,6 +103,17 @@ export default function Settings() {
   const [footerCndp, setFooterCndp] = useState<FooterCndpConfig>(DEFAULT_SETTINGS.footerCndp);
   const [siteMode, setSiteMode] = useState<SiteModeConfig>(DEFAULT_SETTINGS.siteMode);
   const [siteModeLang, setSiteModeLang] = useState<"fr" | "en">("fr");
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const isSectionOpen = (id: string) => !!openSections[id];
+  const toggleSection = (id: string) =>
+    setOpenSections((s) => ({ ...s, [id]: !s[id] }));
+  const setSections = (ids: readonly string[], open: boolean) =>
+    setOpenSections((s) => {
+      const next = { ...s };
+      for (const id of ids) next[id] = open;
+      return next;
+    });
+  const activeSectionIds = TAB_SECTION_IDS[tab];
   const generateSiteMode = trpc.ai.generateSiteMode.useMutation();
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -404,7 +429,7 @@ export default function Settings() {
             enabled: typeof o.enabled === "boolean" ? o.enabled : d.enabled,
             style: o.style === "whiteLogo" || o.style === "light" ? o.style : d.style,
             logoUrl: str(o.logoUrl, d.logoUrl),
-            logoSize: typeof o.logoSize === "number" ? o.logoSize : d.logoSize,
+            logoSize: Math.max(24, Math.min(140, typeof o.logoSize === "number" ? o.logoSize : d.logoSize)),
             declarationNumber: str(o.declarationNumber, d.declarationNumber),
             text: str(o.text, d.text),
             linkUrl: str(o.linkUrl, d.linkUrl),
@@ -561,10 +586,19 @@ export default function Settings() {
     <div className="space-y-5">
       <PageHeader title="Settings" subtitle="Store, header, and homepage configuration." />
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button onClick={save}>Save</Button>
         {saved && <span className="text-sm text-emerald-400">Saved ✓</span>}
         {saveError && <span className="text-sm text-red-400">{saveError}</span>}
+        {activeSectionIds.length > 0 && (
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-xs text-[var(--text-2)]">
+              {activeSectionIds.length} {activeSectionIds.length === 1 ? "section" : "sections"}
+            </span>
+            <Button type="button" variant="outline" size="sm" onClick={() => setSections(activeSectionIds, true)}>Expand all</Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setSections(activeSectionIds, false)}>Collapse all</Button>
+          </div>
+        )}
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TopTab)}>
@@ -578,69 +612,86 @@ export default function Settings() {
         </TabsList>
 
         <TabsContent value="boutique">
-          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-3">
-            <div className="space-y-1.5"><Label>Store name</Label><Input value={values.storeName} onChange={(e) => set("storeName", e.target.value)} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label>Contact email</Label><Input value={values.contactEmail} onChange={(e) => set("contactEmail", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label>Phone</Label><Input value={values.contactPhone} onChange={(e) => set("contactPhone", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label>Tax / VAT (%)</Label><Input type="number" value={values.taxRate} onChange={(e) => set("taxRate", e.target.value)} /></div>
-              <div className="flex items-center"><Checkbox k="codEnabled" label="Cash on delivery enabled" /></div>
-              <div className="space-y-1.5"><Label>Store max width (px)</Label><Input type="number" min={960} max={1920} value={values.storeMaxWidth} onChange={(e) => set("storeMaxWidth", Math.max(960, Number(e.target.value) || 1280))} /></div>
-            </div>
+          <div className="max-w-2xl space-y-3">
+            <SettingsCard
+              title="Store details"
+              description="Name, contact details, VAT and storefront width."
+              open={isSectionOpen("store-details")}
+              onToggle={() => toggleSection("store-details")}
+            >
+              <div className="space-y-1.5"><Label>Store name</Label><Input value={values.storeName} onChange={(e) => set("storeName", e.target.value)} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5"><Label>Contact email</Label><Input value={values.contactEmail} onChange={(e) => set("contactEmail", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Phone</Label><Input value={values.contactPhone} onChange={(e) => set("contactPhone", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Tax / VAT (%)</Label><Input type="number" value={values.taxRate} onChange={(e) => set("taxRate", e.target.value)} /></div>
+                <div className="flex items-center"><Checkbox k="codEnabled" label="Cash on delivery enabled" /></div>
+                <div className="space-y-1.5"><Label>Store max width (px)</Label><Input type="number" min={960} max={1920} value={values.storeMaxWidth} onChange={(e) => set("storeMaxWidth", Math.max(960, Number(e.target.value) || 1280))} /></div>
+              </div>
+            </SettingsCard>
           </div>
         </TabsContent>
 
         <TabsContent value="marque">
-          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-3">
-            <div className="space-y-1.5">
-              <Label>Logo (device image or URL)</Label>
-              <div className="flex flex-col gap-2">
-                <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[var(--line-strong)] px-4 py-2.5 text-sm text-[var(--text-2)] transition-colors hover:border-[var(--gold-hot)] hover:text-[var(--gold)]">
-                  Choose a file
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) {
-                        const reader = new FileReader();
-                        reader.onload = () => set("storeLogo", String(reader.result ?? ""));
-                        reader.readAsDataURL(f);
-                      }
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
-                <Input value={values.storeLogo} onChange={(e) => set("storeLogo", e.target.value)} placeholder="https://… or data:image/…" />
+          <div className="max-w-2xl space-y-3">
+            <SettingsCard
+              title="Store identity"
+              description="Logo, favicon, footer logo and theme colors."
+              open={isSectionOpen("brand-identity")}
+              onToggle={() => toggleSection("brand-identity")}
+            >
+              <div className="space-y-1.5">
+                <Label>Logo (device image or URL)</Label>
+                <div className="flex flex-col gap-2">
+                  <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[var(--line-strong)] px-4 py-2.5 text-sm text-[var(--text-2)] transition-colors hover:border-[var(--gold-hot)] hover:text-[var(--gold)]">
+                    Choose a file
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) {
+                          const reader = new FileReader();
+                          reader.onload = () => set("storeLogo", String(reader.result ?? ""));
+                          reader.readAsDataURL(f);
+                        }
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  <Input value={values.storeLogo} onChange={(e) => set("storeLogo", e.target.value)} placeholder="https://… or data:image/…" />
+                </div>
+                {values.storeLogo ? (
+                  <img src={values.storeLogo} alt="Logo" className="mt-1 h-16 w-auto rounded-lg border border-[var(--line)] bg-white object-contain p-1" />
+                ) : null}
               </div>
-              {values.storeLogo ? (
-                <img src={values.storeLogo} alt="Logo" className="mt-1 h-16 w-auto rounded-lg border border-[var(--line)] bg-white object-contain p-1" />
-              ) : null}
-            </div>
-            <div className="space-y-1.5"><Label>Favicon (URL)</Label><Input value={values.storeFavicon} onChange={(e) => set("storeFavicon", e.target.value)} placeholder="https://…" /></div>
-            <div className="space-y-1.5"><Label>Footer logo size (px)</Label><Input type="number" min={16} max={200} value={values.footerLogoSize} onChange={(e) => set("footerLogoSize", Math.max(16, Number(e.target.value) || 64))} /></div>
-            <div className="space-y-1.5">
-              <Label>Footer logo alignment</Label>
-              <div className="flex gap-2">
-                {(["left", "center", "right"] as const).map((a) => (
-                  <button key={a} type="button" onClick={() => set("footerAlign", a)} className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${values.footerAlign === a ? "bg-[var(--gold)] text-black" : "bg-[var(--page-soft)] text-[var(--text-2)] hover:text-[var(--text-1)]"}`}>{a.charAt(0).toUpperCase() + a.slice(1)}</button>
-                ))}
+              <div className="space-y-1.5"><Label>Favicon (URL)</Label><Input value={values.storeFavicon} onChange={(e) => set("storeFavicon", e.target.value)} placeholder="https://…" /></div>
+              <div className="space-y-1.5"><Label>Footer logo size (px)</Label><Input type="number" min={16} max={200} value={values.footerLogoSize} onChange={(e) => set("footerLogoSize", Math.max(16, Number(e.target.value) || 64))} /></div>
+              <div className="space-y-1.5">
+                <Label>Footer logo alignment</Label>
+                <div className="flex gap-2">
+                  {(["left", "center", "right"] as const).map((a) => (
+                    <button key={a} type="button" onClick={() => set("footerAlign", a)} className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${values.footerAlign === a ? "bg-[var(--gold)] text-black" : "bg-[var(--page-soft)] text-[var(--text-2)] hover:text-[var(--text-1)]"}`}>{a.charAt(0).toUpperCase() + a.slice(1)}</button>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <ColorField value={values.themeAccent} onChange={(v) => set("themeAccent", v)} label="Primary color" />
-              <ColorField value={values.themeAccent2} onChange={(v) => set("themeAccent2", v)} label="Secondary color" />
-            </div>
-          </div>
+              <div className="grid grid-cols-2 gap-3">
+                <ColorField value={values.themeAccent} onChange={(v) => set("themeAccent", v)} label="Primary color" />
+                <ColorField value={values.themeAccent2} onChange={(v) => set("themeAccent2", v)} label="Secondary color" />
+              </div>
+            </SettingsCard>
 
-          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-3">
-            <h3 className="font-hud text-sm font-bold">Product Image Watermark</h3>
-            <p className="text-xs text-[var(--text-2)]">Overlay a transparent logo on all product images. Acts as a layer over the image area, not embedded in pixels.</p>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={productWatermark.enabled} onChange={(e) => setProductWatermark((w) => ({ ...w, enabled: e.target.checked }))} className="accent-[var(--gold)]" />
-              Enable watermark
-            </label>
+          <SettingsCard
+            title="Product image watermark"
+            description="Overlay a transparent logo on all product images. Acts as a layer over the image area, not embedded in pixels."
+            open={isSectionOpen("watermark")}
+            onToggle={() => toggleSection("watermark")}
+            enabledToggle={{
+              checked: productWatermark.enabled,
+              onChange: (v) => setProductWatermark((w) => ({ ...w, enabled: v })),
+              label: "Enabled",
+            }}
+          >
             {productWatermark.enabled && (
               <>
                 <div className="grid grid-cols-2 gap-3">
@@ -689,20 +740,21 @@ export default function Settings() {
                 </div>
               </>
             )}
-          </div>
+          </SettingsCard>
 
-          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-hud text-sm font-bold">Store address (footer)</h3>
-                <p className="text-xs text-[var(--text-2)]">The "Venez nous voir en magasin" block and map shown in the footer.</p>
-              </div>
-              <label className="flex shrink-0 items-center gap-2 text-sm">
-                <input type="checkbox" checked={footerStore.enabled} onChange={(e) => setFooterStore((s) => ({ ...s, enabled: e.target.checked }))} className="accent-[var(--gold)]" />
-                Visible
-              </label>
-            </div>
+          <SectionLabel>Footer blocks</SectionLabel>
 
+          <SettingsCard
+            title="Store address (footer)"
+            description={'The "Venez nous voir en magasin" block and map shown in the footer.'}
+            open={isSectionOpen("footer-store")}
+            onToggle={() => toggleSection("footer-store")}
+            enabledToggle={{
+              checked: footerStore.enabled,
+              onChange: (v) => setFooterStore((s) => ({ ...s, enabled: v })),
+              label: "Visible",
+            }}
+          >
             <div className="space-y-1.5">
               <Label>Section title</Label>
               <Input value={footerStore.title} onChange={(e) => setFooterStore((s) => ({ ...s, title: e.target.value }))} placeholder="Venez nous voir en magasin" />
@@ -732,20 +784,19 @@ export default function Settings() {
               <input type="checkbox" checked={footerStore.showMap} onChange={(e) => setFooterStore((s) => ({ ...s, showMap: e.target.checked }))} className="accent-[var(--gold)]" />
               Show map
             </label>
-          </div>
+          </SettingsCard>
 
-          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-hud text-sm font-bold">CNDP / Data protection (footer)</h3>
-                <p className="text-xs text-[var(--text-2)]">Official CNDP badge and legal agreement shown under the contact block in the footer.</p>
-              </div>
-              <label className="flex shrink-0 items-center gap-2 text-sm">
-                <input type="checkbox" checked={footerCndp.enabled} onChange={(e) => setFooterCndp((s) => ({ ...s, enabled: e.target.checked }))} className="accent-[var(--gold)]" />
-                Visible
-              </label>
-            </div>
-
+          <SettingsCard
+            title="CNDP / Data protection (footer)"
+            description="Official CNDP badge and legal agreement shown under the contact block in the footer."
+            open={isSectionOpen("footer-cndp")}
+            onToggle={() => toggleSection("footer-cndp")}
+            enabledToggle={{
+              checked: footerCndp.enabled,
+              onChange: (v) => setFooterCndp((s) => ({ ...s, enabled: v })),
+              label: "Visible",
+            }}
+          >
             <div className="space-y-1.5">
               <Label>Style</Label>
               <select
@@ -816,23 +867,22 @@ export default function Settings() {
                 />
               </div>
               {footerCndp.logoUrl ? (
-                <img src={footerCndp.logoUrl} alt="CNDP logo preview" className="mt-1 w-auto rounded-lg border border-[var(--line)] bg-white object-contain p-1" style={{ height: footerCndp.logoSize }} />
+                <img src={footerCndp.logoUrl} alt="CNDP logo preview" className="mt-1 w-auto rounded-lg border border-[var(--line)] bg-white object-contain p-1" style={{ height: Math.min(footerCndp.logoSize, 140) }} />
               ) : null}
             </div>
-          </div>
+          </SettingsCard>
 
-          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-hud text-sm font-bold">Payment methods (footer)</h3>
-                <p className="text-xs text-[var(--text-2)]">The "Paiement 100 % sécurisé" cards shown above the footer legal bar.</p>
-              </div>
-              <label className="flex shrink-0 items-center gap-2 text-sm">
-                <input type="checkbox" checked={footerPayments.enabled} onChange={(e) => setFooterPayments((s) => ({ ...s, enabled: e.target.checked }))} className="accent-[var(--gold)]" />
-                Visible
-              </label>
-            </div>
-
+          <SettingsCard
+            title="Payment methods (footer)"
+            description={'The "Paiement 100 % sécurisé" cards shown above the footer legal bar.'}
+            open={isSectionOpen("footer-payments")}
+            onToggle={() => toggleSection("footer-payments")}
+            enabledToggle={{
+              checked: footerPayments.enabled,
+              onChange: (v) => setFooterPayments((s) => ({ ...s, enabled: v })),
+              label: "Visible",
+            }}
+          >
             <div className="space-y-1.5">
               <Label>Section title</Label>
               <Input value={footerPayments.title} onChange={(e) => setFooterPayments((s) => ({ ...s, title: e.target.value }))} placeholder="Paiement 100 % sécurisé" />
@@ -923,20 +973,19 @@ export default function Settings() {
                 <Plus className="h-3.5 w-3.5" /> Add method
               </button>
             </div>
-          </div>
+          </SettingsCard>
 
-          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-hud text-sm font-bold">Legal bar (footer bottom)</h3>
-                <p className="text-xs text-[var(--text-2)]">Company registration numbers and footer links.</p>
-              </div>
-              <label className="flex shrink-0 items-center gap-2 text-sm">
-                <input type="checkbox" checked={footerLegal.enabled} onChange={(e) => setFooterLegal((s) => ({ ...s, enabled: e.target.checked }))} className="accent-[var(--gold)]" />
-                Visible
-              </label>
-            </div>
-
+          <SettingsCard
+            title="Legal bar (footer bottom)"
+            description="Company registration numbers and footer links."
+            open={isSectionOpen("footer-legal")}
+            onToggle={() => toggleSection("footer-legal")}
+            enabledToggle={{
+              checked: footerLegal.enabled,
+              onChange: (v) => setFooterLegal((s) => ({ ...s, enabled: v })),
+              label: "Visible",
+            }}
+          >
             <div className="space-y-1.5">
               <Label>Legal text (RC · IF · ICE · TP · CNSS)</Label>
               <textarea
@@ -997,6 +1046,7 @@ export default function Settings() {
                 <Plus className="h-3.5 w-3.5" /> Add link
               </button>
             </div>
+          </SettingsCard>
           </div>
         </TabsContent>
 
@@ -1269,23 +1319,28 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="site">
-          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-4">
-            <div>
-              <h3 className="font-hud text-sm font-bold mb-1">Site Mode</h3>
-              <p className="text-xs text-[var(--text-2)]">
-                Show a Coming Soon or Maintenance page to all public visitors. Admin and login pages stay accessible.
-              </p>
-            </div>
-
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={siteMode.enabled}
-                onChange={(e) => setSiteMode((s) => ({ ...s, enabled: e.target.checked }))}
-                className="accent-[var(--gold)]"
-              />
-              Enable Site Mode
-            </label>
+          <div className="max-w-2xl space-y-3">
+            <SettingsCard
+              title="Site mode"
+              description="Show a Coming Soon or Maintenance page to all public visitors. Admin and login pages stay accessible."
+              open={isSectionOpen("site-mode")}
+              onToggle={() => toggleSection("site-mode")}
+              badge={
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${siteMode.enabled ? "bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-[var(--text-2)]"}`}>
+                  {siteMode.enabled ? "Enabled" : "Off"}
+                </span>
+              }
+            >
+              <SectionLabel>Page</SectionLabel>
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={siteMode.enabled}
+                  onChange={(e) => setSiteMode((s) => ({ ...s, enabled: e.target.checked }))}
+                  className="accent-[var(--gold)]"
+                />
+                Enable Site Mode
+              </label>
 
             {siteMode.enabled && (
               <>
@@ -1309,6 +1364,7 @@ export default function Settings() {
                   </div>
                 </div>
 
+                <SectionLabel>Content</SectionLabel>
                 <div className="flex flex-wrap items-center gap-3">
                   <Button type="button" variant="outline" size="sm" onClick={handleAiGenerate} disabled={generateSiteMode.isPending}>
                     {generateSiteMode.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
@@ -1381,6 +1437,7 @@ export default function Settings() {
                   </div>
                 </div>
 
+                <SectionLabel>Features</SectionLabel>
                 {siteMode.mode === "coming-soon" && (
                   <>
                     <div className="rounded-lg border border-[var(--line)] bg-[var(--page)] p-3 space-y-2">
@@ -1478,6 +1535,7 @@ export default function Settings() {
                   )}
                 </div>
 
+                <SectionLabel>Appearance</SectionLabel>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <Label>Background</Label>
@@ -1507,19 +1565,20 @@ export default function Settings() {
                 </div>
               </>
             )}
+            </SettingsCard>
           </div>
         </TabsContent>
 
         <TabsContent value="api">
-          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-4">
-            <div>
-              <h3 className="font-hud text-sm font-bold mb-1">AI Provider</h3>
-              <p className="text-xs text-[var(--text-2)]">
-                Choose a provider for AI content generation (product sheets, blog posts, SEO, campaigns).
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Provider</Label>
+          <div className="max-w-2xl space-y-3">
+            <SettingsCard
+              title="AI provider"
+              description="Choose a provider for AI content generation (product sheets, blog posts, SEO, campaigns)."
+              open={isSectionOpen("ai-provider")}
+              onToggle={() => toggleSection("ai-provider")}
+            >
+              <div className="space-y-1.5">
+                <Label>Provider</Label>
               <div className="flex gap-3">
                 <label className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-4 py-2.5 cursor-pointer hover:bg-white/5 has-[:checked]:border-[var(--gold)] has-[:checked]:bg-[var(--gold-dim)]">
                   <input type="radio" name="aiProvider" value="opencode-zen" checked={values.aiProvider === "opencode-zen"} onChange={(e) => set("aiProvider", e.target.value)} className="accent-[var(--gold)]" />
@@ -1636,6 +1695,7 @@ export default function Settings() {
                 )}
               </>
             )}
+            </SettingsCard>
           </div>
         </TabsContent>
       </Tabs>

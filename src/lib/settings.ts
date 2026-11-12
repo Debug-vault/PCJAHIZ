@@ -679,7 +679,7 @@ export function normalizeSettings(raw: Record<string, unknown> | undefined): Sto
         enabled: readBool(o.enabled, d.enabled),
         style: o.style === "whiteLogo" || o.style === "light" ? o.style : d.style,
         logoUrl: readStr(o.logoUrl, d.logoUrl),
-        logoSize: Math.max(16, Math.min(200, readNum(o.logoSize, d.logoSize))),
+        logoSize: Math.max(24, Math.min(140, readNum(o.logoSize, d.logoSize))),
         declarationNumber: readStr(o.declarationNumber, d.declarationNumber),
         text: readStr(o.text, d.text),
         linkUrl: readStr(o.linkUrl, d.linkUrl),
