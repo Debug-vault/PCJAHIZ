@@ -42523,6 +42523,7 @@ var PUBLIC_SETTINGS_KEYS = [
   "footerPayments",
   "footerLegal",
   "footerStore",
+  "footerCndp",
   "siteMode"
 ];
 var SECRET_KEY_PATTERN = /apikey|secret|token|password/i;

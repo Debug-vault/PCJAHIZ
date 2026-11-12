@@ -66,6 +66,7 @@ const PUBLIC_SETTINGS_KEYS = [
   "footerPayments",
   "footerLegal",
   "footerStore",
+  "footerCndp",
   "siteMode",
 ] as const;
 

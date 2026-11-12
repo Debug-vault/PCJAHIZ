@@ -112,6 +112,18 @@ export function normalizeMapEmbedUrl(input: string | null | undefined): string {
   return /^https?:\/\//i.test(candidate) ? candidate : "";
 }
 
+export type FooterCndpConfig = {
+  enabled: boolean;
+  /** Logo shown in the footer CNDP block. Defaults to the bundled CNDP badge. */
+  logoUrl: string;
+  /** CNDP declaration number, e.g. "D-1234/2026". Leave empty to hide the number. */
+  declarationNumber: string;
+  /** Legal agreement text shown under the logo. */
+  text: string;
+  /** Link opened when clicking the block (defaults to cndp.ma). */
+  linkUrl: string;
+};
+
 export type SiteModeConfig = {
   enabled: boolean;
   mode: "coming-soon" | "maintenance";
@@ -183,6 +195,7 @@ export type StoreSettings = {
   footerPayments: FooterPaymentsConfig;
   footerLegal: FooterLegalConfig;
   footerStore: FooterStoreConfig;
+  footerCndp: FooterCndpConfig;
   siteMode: SiteModeConfig;
 };
 
@@ -359,6 +372,13 @@ export const DEFAULT_SETTINGS: StoreSettings = {
     mapUrl: "https://maps.google.com",
     mapEmbedUrl: "",
     showMap: true,
+  },
+  footerCndp: {
+    enabled: true,
+    logoUrl: "/cndp-logo.png",
+    declarationNumber: "",
+    text: "Les données personnelles collectées sur ce site sont traitées conformément à la loi n° 09-08 relative à la protection des personnes physiques à l'égard du traitement des données à caractère personnel.",
+    linkUrl: "https://www.cndp.ma",
   },
   siteMode: {
     enabled: false,
@@ -640,6 +660,19 @@ export function normalizeSettings(raw: Record<string, unknown> | undefined): Sto
         mapUrl: readStr(o.mapUrl, d.mapUrl),
         mapEmbedUrl: normalizeMapEmbedUrl(readStr(o.mapEmbedUrl, d.mapEmbedUrl)),
         showMap: readBool(o.showMap, d.showMap),
+      };
+    })(),
+    footerCndp: (() => {
+      const rawC = raw.footerCndp as Record<string, unknown> | undefined;
+      const o = (rawC && typeof rawC === "object" && "value" in rawC && rawC.value !== null && typeof rawC.value === "object" ? rawC.value : rawC) as Record<string, unknown> | undefined;
+      const d = DEFAULT_SETTINGS.footerCndp;
+      if (!o || typeof o !== "object") return d;
+      return {
+        enabled: readBool(o.enabled, d.enabled),
+        logoUrl: readStr(o.logoUrl, d.logoUrl),
+        declarationNumber: readStr(o.declarationNumber, d.declarationNumber),
+        text: readStr(o.text, d.text),
+        linkUrl: readStr(o.linkUrl, d.linkUrl),
       };
     })(),
     siteMode: (() => {

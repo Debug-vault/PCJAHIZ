@@ -5,7 +5,7 @@ import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEFAULT_HEADER, DEFAULT_SETTINGS, normalizeMapEmbedUrl, type HeaderConfig, type HeaderSliderDirection, type SiteModeConfig, type FooterPaymentsConfig, type FooterLegalConfig, type FooterStoreConfig } from "@/lib/settings";
+import { DEFAULT_HEADER, DEFAULT_SETTINGS, normalizeMapEmbedUrl, type HeaderConfig, type HeaderSliderDirection, type SiteModeConfig, type FooterPaymentsConfig, type FooterLegalConfig, type FooterStoreConfig, type FooterCndpConfig } from "@/lib/settings";
 import { HeaderEditor } from "@/pages/admin/header-settings";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -86,6 +86,7 @@ export default function Settings() {
   const [footerPayments, setFooterPayments] = useState<FooterPaymentsConfig>(DEFAULT_SETTINGS.footerPayments);
   const [footerLegal, setFooterLegal] = useState<FooterLegalConfig>(DEFAULT_SETTINGS.footerLegal);
   const [footerStore, setFooterStore] = useState<FooterStoreConfig>(DEFAULT_SETTINGS.footerStore);
+  const [footerCndp, setFooterCndp] = useState<FooterCndpConfig>(DEFAULT_SETTINGS.footerCndp);
   const [siteMode, setSiteMode] = useState<SiteModeConfig>(DEFAULT_SETTINGS.siteMode);
   const [siteModeLang, setSiteModeLang] = useState<"fr" | "en">("fr");
   const generateSiteMode = trpc.ai.generateSiteMode.useMutation();
@@ -393,6 +394,22 @@ export default function Settings() {
         }
         continue;
       }
+      if (row.key === "footerCndp") {
+        const rawC = unwrap(row.value) as Record<string, unknown> | null;
+        const o = (rawC && typeof rawC === "object" && "value" in rawC && rawC.value !== null && typeof rawC.value === "object" ? rawC.value : rawC) as Record<string, unknown> | null;
+        if (o && typeof o === "object") {
+          const d = DEFAULT_SETTINGS.footerCndp;
+          const str = (v: unknown, fb: string) => (typeof v === "string" ? v : fb);
+          setFooterCndp({
+            enabled: typeof o.enabled === "boolean" ? o.enabled : d.enabled,
+            logoUrl: str(o.logoUrl, d.logoUrl),
+            declarationNumber: str(o.declarationNumber, d.declarationNumber),
+            text: str(o.text, d.text),
+            linkUrl: str(o.linkUrl, d.linkUrl),
+          });
+        }
+        continue;
+      }
       if (row.key === "siteMode") {
         const rawSm = unwrap(row.value) as Record<string, unknown> | null;
         const o = (rawSm && typeof rawSm === "object" && "value" in rawSm && rawSm.value !== null && typeof rawSm.value === "object" ? rawSm.value : rawSm) as Record<string, unknown> | null;
@@ -489,6 +506,7 @@ export default function Settings() {
         footerPayments: { value: footerPayments },
         footerLegal: { value: footerLegal },
         footerStore: { value: { ...footerStore, mapEmbedUrl: normalizeMapEmbedUrl(footerStore.mapEmbedUrl) } },
+        footerCndp: { value: footerCndp },
         siteMode: { value: siteMode },
         headerConfig: { value: header },
         openCodeZenApiKey: { value: values.openCodeZenApiKey },
@@ -712,6 +730,68 @@ export default function Settings() {
               <input type="checkbox" checked={footerStore.showMap} onChange={(e) => setFooterStore((s) => ({ ...s, showMap: e.target.checked }))} className="accent-[var(--gold)]" />
               Show map
             </label>
+          </div>
+
+          <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-hud text-sm font-bold">CNDP / Data protection (footer)</h3>
+                <p className="text-xs text-[var(--text-2)]">Official CNDP badge and legal agreement shown under the contact block in the footer.</p>
+              </div>
+              <label className="flex shrink-0 items-center gap-2 text-sm">
+                <input type="checkbox" checked={footerCndp.enabled} onChange={(e) => setFooterCndp((s) => ({ ...s, enabled: e.target.checked }))} className="accent-[var(--gold)]" />
+                Visible
+              </label>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Declaration number (optional)</Label>
+                <Input value={footerCndp.declarationNumber} onChange={(e) => setFooterCndp((s) => ({ ...s, declarationNumber: e.target.value }))} placeholder="D-1234/2026" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>CNDP link</Label>
+                <Input value={footerCndp.linkUrl} onChange={(e) => setFooterCndp((s) => ({ ...s, linkUrl: e.target.value }))} placeholder="https://www.cndp.ma" />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Legal agreement text</Label>
+              <textarea
+                value={footerCndp.text}
+                onChange={(e) => setFooterCndp((s) => ({ ...s, text: e.target.value }))}
+                rows={3}
+                className="w-full rounded-md border border-[var(--line)] bg-[var(--page)] px-3 py-2 text-sm"
+                placeholder="Les données personnelles collectées sur ce site sont traitées conformément à la loi n° 09-08…"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>CNDP logo</Label>
+              <div className="flex flex-col gap-2">
+                <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[var(--line-strong)] px-4 py-2.5 text-sm text-[var(--text-2)] transition-colors hover:border-[var(--gold-hot)] hover:text-[var(--gold)]">
+                  Choose a file
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        const reader = new FileReader();
+                        reader.onload = () => setFooterCndp((s) => ({ ...s, logoUrl: String(reader.result ?? "") }));
+                        reader.readAsDataURL(f);
+                      }
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <Input value={footerCndp.logoUrl} onChange={(e) => setFooterCndp((s) => ({ ...s, logoUrl: e.target.value }))} placeholder="/cndp-logo.png or https://…" />
+              </div>
+              {footerCndp.logoUrl ? (
+                <img src={footerCndp.logoUrl} alt="CNDP logo preview" className="mt-1 h-16 w-auto rounded-lg border border-[var(--line)] bg-white object-contain p-1" />
+              ) : null}
+            </div>
           </div>
 
           <div className="max-w-2xl rounded-xl border border-[var(--line)] bg-[var(--glass-solid)] p-5 space-y-3">

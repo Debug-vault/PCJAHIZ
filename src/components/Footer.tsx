@@ -19,6 +19,7 @@ export function Footer() {
   const h = settings.header;
   const footerBg = h?.bottomNav?.bg || "#1a1a2e";
   const fs = settings.footerStore;
+  const cndp = settings.footerCndp;
   const mapSrc =
     normalizeMapEmbedUrl(fs.mapEmbedUrl) ||
     (fs.address.trim() ? `https://www.google.com/maps?q=${encodeURIComponent(fs.address.trim())}&output=embed` : "");
@@ -59,6 +60,37 @@ export function Footer() {
                 <li className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 shrink-0 text-[var(--gold)]" />{t("footer.trackingLabel")}</li>
                 <li className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 shrink-0 text-[var(--gold)]" />{t("footer.allContactsLabel")}</li>
               </ul>
+
+              {/* CNDP – personal data protection */}
+              {cndp.enabled && (cndp.logoUrl.trim() || cndp.text.trim()) && (
+                <div className="mt-6 flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3.5">
+                  {cndp.logoUrl.trim() ? (
+                    <img
+                      src={cndp.logoUrl}
+                      alt="CNDP"
+                      className="h-14 w-auto shrink-0 rounded bg-white object-contain p-1"
+                      loading="lazy"
+                    />
+                  ) : null}
+                  <div className="min-w-0 text-xs leading-relaxed text-white/55">
+                    <p className="font-semibold text-white/80">
+                      {t("footer.cndpTitle")}
+                      {cndp.declarationNumber.trim() ? ` N° ${cndp.declarationNumber.trim()}` : ""}
+                    </p>
+                    {cndp.text.trim() ? <p className="mt-1">{cndp.text}</p> : null}
+                    {cndp.linkUrl.trim() ? (
+                      <a
+                        href={cndp.linkUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1.5 inline-flex items-center gap-1 text-white/45 transition-colors hover:text-white"
+                      >
+                        cndp.ma <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Store */}
