@@ -403,6 +403,7 @@ export default function Settings() {
           setFooterCndp({
             enabled: typeof o.enabled === "boolean" ? o.enabled : d.enabled,
             logoUrl: str(o.logoUrl, d.logoUrl),
+            logoSize: typeof o.logoSize === "number" ? o.logoSize : d.logoSize,
             declarationNumber: str(o.declarationNumber, d.declarationNumber),
             text: str(o.text, d.text),
             linkUrl: str(o.linkUrl, d.linkUrl),
@@ -788,8 +789,20 @@ export default function Settings() {
                 </label>
                 <Input value={footerCndp.logoUrl} onChange={(e) => setFooterCndp((s) => ({ ...s, logoUrl: e.target.value }))} placeholder="/cndp-logo.png or https://…" />
               </div>
+              <div className="space-y-1.5 pt-1">
+                <Label>CNDP logo size — {footerCndp.logoSize}px</Label>
+                <input
+                  type="range"
+                  min={24}
+                  max={140}
+                  step={4}
+                  value={footerCndp.logoSize}
+                  onChange={(e) => setFooterCndp((s) => ({ ...s, logoSize: Number(e.target.value) }))}
+                  className="w-full accent-[var(--gold)]"
+                />
+              </div>
               {footerCndp.logoUrl ? (
-                <img src={footerCndp.logoUrl} alt="CNDP logo preview" className="mt-1 h-16 w-auto rounded-lg border border-[var(--line)] bg-white object-contain p-1" />
+                <img src={footerCndp.logoUrl} alt="CNDP logo preview" className="mt-1 w-auto rounded-lg border border-[var(--line)] bg-white object-contain p-1" style={{ height: footerCndp.logoSize }} />
               ) : null}
             </div>
           </div>

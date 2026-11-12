@@ -68,7 +68,8 @@ export function Footer() {
                     <img
                       src={cndp.logoUrl}
                       alt="CNDP"
-                      className="h-14 w-auto shrink-0 rounded bg-white object-contain p-1"
+                      className="w-auto shrink-0 rounded bg-white object-contain p-1"
+                      style={{ height: cndp.logoSize }}
                       loading="lazy"
                     />
                   ) : null}

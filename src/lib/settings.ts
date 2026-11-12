@@ -116,6 +116,8 @@ export type FooterCndpConfig = {
   enabled: boolean;
   /** Logo shown in the footer CNDP block. Defaults to the bundled CNDP badge. */
   logoUrl: string;
+  /** Logo height in pixels. */
+  logoSize: number;
   /** CNDP declaration number, e.g. "D-1234/2026". Leave empty to hide the number. */
   declarationNumber: string;
   /** Legal agreement text shown under the logo. */
@@ -376,6 +378,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   footerCndp: {
     enabled: true,
     logoUrl: "/cndp-logo.png",
+    logoSize: 56,
     declarationNumber: "",
     text: "Les données personnelles collectées sur ce site sont traitées conformément à la loi n° 09-08 relative à la protection des personnes physiques à l'égard du traitement des données à caractère personnel.",
     linkUrl: "https://www.cndp.ma",
@@ -670,6 +673,7 @@ export function normalizeSettings(raw: Record<string, unknown> | undefined): Sto
       return {
         enabled: readBool(o.enabled, d.enabled),
         logoUrl: readStr(o.logoUrl, d.logoUrl),
+        logoSize: Math.max(16, Math.min(200, readNum(o.logoSize, d.logoSize))),
         declarationNumber: readStr(o.declarationNumber, d.declarationNumber),
         text: readStr(o.text, d.text),
         linkUrl: readStr(o.linkUrl, d.linkUrl),
