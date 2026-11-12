@@ -112,8 +112,12 @@ export function normalizeMapEmbedUrl(input: string | null | undefined): string {
   return /^https?:\/\//i.test(candidate) ? candidate : "";
 }
 
+export type FooterCndpStyle = "default" | "whiteLogo" | "light";
+
 export type FooterCndpConfig = {
   enabled: boolean;
+  /** Visual treatment of the footer CNDP block. */
+  style: FooterCndpStyle;
   /** Logo shown in the footer CNDP block. Defaults to the bundled CNDP badge. */
   logoUrl: string;
   /** Logo height in pixels. */
@@ -377,6 +381,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   },
   footerCndp: {
     enabled: true,
+    style: "default",
     logoUrl: "/cndp-logo.png",
     logoSize: 56,
     declarationNumber: "",
@@ -672,6 +677,7 @@ export function normalizeSettings(raw: Record<string, unknown> | undefined): Sto
       if (!o || typeof o !== "object") return d;
       return {
         enabled: readBool(o.enabled, d.enabled),
+        style: o.style === "whiteLogo" || o.style === "light" ? o.style : d.style,
         logoUrl: readStr(o.logoUrl, d.logoUrl),
         logoSize: Math.max(16, Math.min(200, readNum(o.logoSize, d.logoSize))),
         declarationNumber: readStr(o.declarationNumber, d.declarationNumber),

@@ -20,6 +20,12 @@ export function Footer() {
   const footerBg = h?.bottomNav?.bg || "#1a1a2e";
   const fs = settings.footerStore;
   const cndp = settings.footerCndp;
+  const cndpBoxClass =
+    cndp.style === "light"
+      ? "mt-6 flex items-start gap-3 rounded-xl p-3.5"
+      : cndp.style === "whiteLogo"
+        ? "mt-6 flex items-start gap-3 rounded-xl border border-white/10 p-3.5"
+        : "mt-6 flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3.5";
   const mapSrc =
     normalizeMapEmbedUrl(fs.mapEmbedUrl) ||
     (fs.address.trim() ? `https://www.google.com/maps?q=${encodeURIComponent(fs.address.trim())}&output=embed` : "");
@@ -63,18 +69,31 @@ export function Footer() {
 
               {/* CNDP – personal data protection */}
               {cndp.enabled && (cndp.logoUrl.trim() || cndp.text.trim()) && (
-                <div className="mt-6 flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3.5">
+                <div
+                  className={cndpBoxClass}
+                  style={cndp.style === "light" ? { background: "#ffffff", color: footerBg } : undefined}
+                >
                   {cndp.logoUrl.trim() ? (
                     <img
                       src={cndp.logoUrl}
                       alt="CNDP"
-                      className="w-auto shrink-0 rounded bg-white object-contain p-1"
-                      style={{ height: cndp.logoSize }}
+                      className={`w-auto shrink-0 object-contain ${
+                        cndp.style === "default" ? "rounded bg-white p-1" : ""
+                      }`}
+                      style={{
+                        height: cndp.logoSize,
+                        ...(cndp.style === "whiteLogo" ? { filter: "brightness(0) invert(1)" } : {}),
+                      }}
                       loading="lazy"
                     />
                   ) : null}
-                  <div className="min-w-0 text-xs leading-relaxed text-white/55">
-                    <p className="font-semibold text-white/80">
+                  <div
+                    className={`min-w-0 text-xs leading-relaxed ${
+                      cndp.style === "light" ? "" : "text-white/55"
+                    }`}
+                    style={cndp.style === "light" ? { color: footerBg } : undefined}
+                  >
+                    <p className={`font-semibold ${cndp.style === "light" ? "" : "text-white/80"}`}>
                       {t("footer.cndpTitle")}
                       {cndp.declarationNumber.trim() ? ` N° ${cndp.declarationNumber.trim()}` : ""}
                     </p>
@@ -84,7 +103,12 @@ export function Footer() {
                         href={cndp.linkUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1.5 inline-flex items-center gap-1 text-white/45 transition-colors hover:text-white"
+                        className={`mt-1.5 inline-flex items-center gap-1 transition-opacity ${
+                          cndp.style === "light"
+                            ? "opacity-70 hover:opacity-100"
+                            : "text-white/45 hover:text-white"
+                        }`}
+                        style={cndp.style === "light" ? { color: footerBg } : undefined}
                       >
                         cndp.ma <ExternalLink className="h-3 w-3" />
                       </a>

@@ -5,7 +5,7 @@ import { trpc } from "@/providers/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEFAULT_HEADER, DEFAULT_SETTINGS, normalizeMapEmbedUrl, type HeaderConfig, type HeaderSliderDirection, type SiteModeConfig, type FooterPaymentsConfig, type FooterLegalConfig, type FooterStoreConfig, type FooterCndpConfig } from "@/lib/settings";
+import { DEFAULT_HEADER, DEFAULT_SETTINGS, normalizeMapEmbedUrl, type HeaderConfig, type HeaderSliderDirection, type SiteModeConfig, type FooterPaymentsConfig, type FooterLegalConfig, type FooterStoreConfig, type FooterCndpConfig, type FooterCndpStyle } from "@/lib/settings";
 import { HeaderEditor } from "@/pages/admin/header-settings";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -402,6 +402,7 @@ export default function Settings() {
           const str = (v: unknown, fb: string) => (typeof v === "string" ? v : fb);
           setFooterCndp({
             enabled: typeof o.enabled === "boolean" ? o.enabled : d.enabled,
+            style: o.style === "whiteLogo" || o.style === "light" ? o.style : d.style,
             logoUrl: str(o.logoUrl, d.logoUrl),
             logoSize: typeof o.logoSize === "number" ? o.logoSize : d.logoSize,
             declarationNumber: str(o.declarationNumber, d.declarationNumber),
@@ -743,6 +744,19 @@ export default function Settings() {
                 <input type="checkbox" checked={footerCndp.enabled} onChange={(e) => setFooterCndp((s) => ({ ...s, enabled: e.target.checked }))} className="accent-[var(--gold)]" />
                 Visible
               </label>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Style</Label>
+              <select
+                value={footerCndp.style}
+                onChange={(e) => setFooterCndp((s) => ({ ...s, style: e.target.value as FooterCndpStyle }))}
+                className="w-full rounded-md border border-[var(--line)] bg-[var(--page)] px-3 py-2 text-sm"
+              >
+                <option value="default">Dark card · white badge (default)</option>
+                <option value="whiteLogo">Dark card · white logo</option>
+                <option value="light">White card · footer-colored text</option>
+              </select>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
